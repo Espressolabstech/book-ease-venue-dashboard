@@ -147,6 +147,92 @@ declare global {
         status: string;
         expires_at: string;
     }
+
+    interface IsOnBoardedResponse {
+        message: string;
+        data: {
+            isOnBoarded: boolean;
+        };
+    }
+
+    interface VenueOnboardRequestData {
+        token: string;
+        venueName: string;
+        description?: string;
+        venuemail: string;
+        venuePhone: string;
+        venueAddress: string;
+        city: string;
+        state: string;
+        country: string;
+        pincode: string;
+        latitude?: number;
+        longitude?: number;
+        venueHours?: {
+            dayOfWeek: number;
+            openTime: string;
+            closeTime: string;
+            isClosed?: boolean;
+        }[];
+        venueImages?: {
+            publicUrl: string;
+            type: 'LOGO' | 'COVER' | 'GALLERY';
+            order?: number;
+        }[];
+        amenities?: {
+            name: string;
+            icon?: string;
+        }[];
+        courts?: {
+            name: string;
+            sport: string;
+            courtEnvironment: string;
+            surface: string;
+            images?: {
+                publicUrl: string;
+                altText?: string;
+            }[];
+            timeSlots?: {
+                dayOfWeek: number;
+                startTime: string;
+                endTime: string;
+            }[];
+            pricing?: {
+                pricePerHour: number;
+                weekendPricePerHour?: number;
+                weekendDays?: string[];
+            };
+            peakHourPricings?: {
+                dayOfWeek?: number;
+                startTime: string;
+                endTime: string;
+                pricePerHour: number;
+                label?: string;
+            }[];
+        }[];
+        advanceBookingDays?: number;
+        minimumNoticeMinutes?: number;
+        cancellationPolicy?: string;
+        maxBookingPerPlayerDay?: number | null;
+        bankName: string;
+        accountNumber: string;
+        ifscCode: string;
+        accountHolderName: string;
+        payOutSchedule?: string;
+    }
+
+    interface GetOnBoardedVenueDetailsResponse {
+        message: string;
+        data: {
+            name: string;
+            email: string;
+            phone: string;
+            city: string;
+            state: string;
+            country: string;
+            pincode: string;
+        };
+    }
 }
 
 export {};

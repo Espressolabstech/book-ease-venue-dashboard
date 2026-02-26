@@ -7,6 +7,17 @@ declare global {
         phone: string;
         otp: string;
     }
+
+    interface AuthResponse {
+        message: string;
+        data: {
+            token: string;
+        };
+    }
+
+    interface ResendOtp {
+        phone: string;
+    }
 }
 
 export {};

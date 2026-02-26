@@ -1,11 +1,204 @@
 import { Label } from '@radix-ui/react-label';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '../ui/input';
 import { cn } from '../../utils/twMerge';
 import { Textarea } from '../ui/textarea';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, MapPin, Images } from 'lucide-react';
 import ImageCropDialog from './ImageCropDialog';
 import { toast } from 'sonner';
+import { getOnBoardedVenueDetails } from '../../api/adapters/onBoard';
+
+const MapLocationPicker = ({
+    latitude,
+    longitude,
+    onChange,
+}: {
+    latitude?: number;
+    longitude?: number;
+    onChange: (lat: number, lng: number) => void;
+}) => {
+    const mapRef = useRef<HTMLDivElement>(null);
+    const leafletMapRef = useRef<any>(null);
+    const markerRef = useRef<any>(null);
+
+    useEffect(() => {
+        if (!document.getElementById('leaflet-css')) {
+            const link = document.createElement('link');
+            link.id = 'leaflet-css';
+            link.rel = 'stylesheet';
+            link.href =
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';
+            document.head.appendChild(link);
+        }
+
+        const initMap = (L: any) => {
+            if (!mapRef.current || leafletMapRef.current) return;
+
+            const defaultLat = latitude ?? 20.5937;
+            const defaultLng = longitude ?? 78.9629;
+
+            const map = L.map(mapRef.current, { zoomControl: true }).setView(
+                [defaultLat, defaultLng],
+                latitude ? 14 : 5,
+            );
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+            }).addTo(map);
+
+            const markerIcon = L.icon({
+                iconUrl:
+                    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                shadowUrl:
+                    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+            });
+
+            if (latitude && longitude) {
+                markerRef.current = L.marker([latitude, longitude], {
+                    icon: markerIcon,
+                    draggable: true,
+                }).addTo(map);
+                markerRef.current.on('dragend', (e: any) => {
+                    const { lat, lng } = e.target.getLatLng();
+                    onChange(
+                        parseFloat(lat.toFixed(6)),
+                        parseFloat(lng.toFixed(6)),
+                    );
+                });
+            }
+
+            map.on('click', (e: any) => {
+                const { lat, lng } = e.latlng;
+                const roundedLat = parseFloat(lat.toFixed(6));
+                const roundedLng = parseFloat(lng.toFixed(6));
+
+                if (markerRef.current) {
+                    markerRef.current.setLatLng([roundedLat, roundedLng]);
+                } else {
+                    markerRef.current = L.marker([roundedLat, roundedLng], {
+                        icon: markerIcon,
+                        draggable: true,
+                    }).addTo(map);
+                    markerRef.current.on('dragend', (ev: any) => {
+                        const pos = ev.target.getLatLng();
+                        onChange(
+                            parseFloat(pos.lat.toFixed(6)),
+                            parseFloat(pos.lng.toFixed(6)),
+                        );
+                    });
+                }
+                onChange(roundedLat, roundedLng);
+            });
+
+            leafletMapRef.current = map;
+        };
+
+        if ((window as any).L) {
+            initMap((window as any).L);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src =
+            'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+        script.onload = () => initMap((window as any).L);
+        document.head.appendChild(script);
+
+        return () => {
+            if (leafletMapRef.current) {
+                leafletMapRef.current.remove();
+                leafletMapRef.current = null;
+                markerRef.current = null;
+            }
+        };
+    }, []); // eslint-disable-line
+
+    useEffect(() => {
+        if (!leafletMapRef.current || !latitude || !longitude) return;
+        if (markerRef.current)
+            markerRef.current.setLatLng([latitude, longitude]);
+        leafletMapRef.current.setView([latitude, longitude], 14);
+    }, [latitude, longitude]);
+
+    return (
+        <div
+            ref={mapRef}
+            className="h-64 w-full rounded-xl border border-border overflow-hidden"
+            style={{ zIndex: 0 }}
+        />
+    );
+};
+
+const GalleryUpload = ({
+    images,
+    onAdd,
+    onRemove,
+    uploading,
+}: {
+    images: string[];
+    onAdd: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onRemove: (url: string) => void;
+    uploading: boolean;
+}) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    return (
+        <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+                {images.map((url) => (
+                    <div key={url} className="relative group aspect-video">
+                        <img
+                            src={url}
+                            alt=""
+                            className="h-full w-full rounded-lg object-cover border border-border"
+                        />
+                        <button
+                            onClick={() => onRemove(url)}
+                            className="absolute right-1 top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                            <X className="h-3 w-3" />
+                        </button>
+                    </div>
+                ))}
+
+                {images.length < 10 && (
+                    <button
+                        onClick={() => inputRef.current?.click()}
+                        disabled={uploading}
+                        className="flex aspect-video flex-col items-center justify-center rounded-lg border-2 border-dashed border-border hover:border-muted-foreground/50 transition-colors"
+                    >
+                        {uploading ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        ) : (
+                            <>
+                                <Images className="h-5 w-5 text-muted-foreground" />
+                                <span className="mt-1 text-xs text-muted-foreground">
+                                    Add photo
+                                </span>
+                            </>
+                        )}
+                    </button>
+                )}
+            </div>
+
+            <input
+                ref={inputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={onAdd}
+            />
+            <p className="text-xs text-muted-foreground">
+                Up to 10 photos · JPG, PNG, or WEBP · Max 5MB each
+            </p>
+        </div>
+    );
+};
 
 const StepVenueProfile = ({
     venueId,
@@ -21,11 +214,18 @@ const StepVenueProfile = ({
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
     const [city, setCity] = useState('');
+    const [state, setState] = useState('');
+    const [country, setCountry] = useState('');
+    const [pincode, setPincode] = useState('');
     const [description, setDescription] = useState('');
     const [contactEmail, setContactEmail] = useState('');
     const [whatsapp, setWhatsapp] = useState('');
     const [logoUrl, setLogoUrl] = useState('');
     const [coverUrl, setCoverUrl] = useState('');
+    const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+    const [galleryUploading, setGalleryUploading] = useState(false);
+    const [latitude, setLatitude] = useState<number | undefined>();
+    const [longitude, setLongitude] = useState<number | undefined>();
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [logoUploading, setLogoUploading] = useState(false);
     const [coverUploading, setCoverUploading] = useState(false);
@@ -39,28 +239,49 @@ const StepVenueProfile = ({
     const coverInputRef = useRef<HTMLInputElement>(null);
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // Pre-fill from venue
-    useEffect(() => {
-        if (!venue) return;
-        setName(venue.name || '');
-        setAddress(venue.address || '');
-        setCity(venue.city || '');
-        setDescription(venue.description || '');
-        setContactEmail(venue.contact_email || '');
-        setWhatsapp(venue.whatsapp_number || '');
-        setLogoUrl(venue.logo_url || '');
-        setCoverUrl(venue.cover_photo_url || '');
-    }, [venue]);
+    const { data: venueDetails, isLoading: isLoadingDetails } = useQuery({
+        queryKey: ['onboardedVenueDetails'],
+        queryFn: getOnBoardedVenueDetails,
+        enabled: !venue,
+    });
 
-    // Auto-save on blur
+    useEffect(() => {
+        if (venue) {
+            setName(venue.name || '');
+            setAddress(venue.address || '');
+            setCity(venue.city || '');
+            setState(venue.state || '');
+            setCountry(venue.country || '');
+            setPincode(venue.pincode || '');
+            setDescription(venue.description || '');
+            setContactEmail(venue.contact_email || '');
+            setWhatsapp(venue.whatsapp_number || '');
+            setLogoUrl(venue.logo_url || '');
+            setCoverUrl(venue.cover_photo_url || '');
+            setGalleryUrls(venue.gallery_urls || []);
+            setLatitude(venue.latitude);
+            setLongitude(venue.longitude);
+            return;
+        }
+
+        const d = venueDetails?.data;
+        if (!d) return;
+
+        setName(d.name || '');
+        setCity(d.city || '');
+        setState(d.state || '');
+        setCountry(d.country || '');
+        setPincode(d.pincode || '');
+        setContactEmail(d.email || '');
+        setWhatsapp(d.phone?.replace(/^\+91/, '') || '');
+    }, [venue, venueDetails]);
+
+    // ------------------------------------------------------------------
+
     const autoSave = useCallback(
         async (field: string, value: any) => {
             // onSaving(true);
-            // const { error } = await supabase
-            //     .from('venues')
-            //     .update({ [field]: value })
-            //     .eq('id', venueId);
-            // if (error) console.error('Auto-save error:', error);
+            // await supabase.from('venues').update({ [field]: value }).eq('id', venueId);
             // onSaving(false);
             // onSaved();
         },
@@ -78,7 +299,6 @@ const StepVenueProfile = ({
         [autoSave],
     );
 
-    // Validate
     const validate = () => {
         const errs: Record<string, string> = {};
         if (!name.trim()) errs.name = 'Venue name is required';
@@ -93,13 +313,11 @@ const StepVenueProfile = ({
         return Object.keys(errs).length === 0;
     };
 
-    // Handle Save & Continue trigger
     useEffect(() => {
         if (!triggerSave) return;
         (async () => {
             if (!validate()) {
                 onSaveComplete(false);
-                // Scroll to first error
                 const firstErr = document.querySelector("[data-error='true']");
                 firstErr?.scrollIntoView({
                     behavior: 'smooth',
@@ -108,27 +326,23 @@ const StepVenueProfile = ({
                 return;
             }
             onSaving(true);
-
             onSaving(false);
             onSaved();
             onSaveComplete(true);
         })();
     }, [triggerSave]); // eslint-disable-line
 
-    // Handle Save & Exit trigger
     useEffect(() => {
         if (!triggerExit) return;
         (async () => {})();
     }, [triggerExit]); // eslint-disable-line
 
-    // File selection
     const handleFileSelect = (
         e: React.ChangeEvent<HTMLInputElement>,
         target: 'logo' | 'cover',
     ) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
         const maxSize = target === 'logo' ? 2 * 1024 * 1024 : 5 * 1024 * 1024;
         if (file.size > maxSize) {
             toast.error(
@@ -136,7 +350,6 @@ const StepVenueProfile = ({
             );
             return;
         }
-
         const reader = new FileReader();
         reader.onload = () => {
             setCropImage(reader.result as string);
@@ -151,32 +364,54 @@ const StepVenueProfile = ({
     const handleCropComplete = async (blob: Blob) => {
         const isLogo = cropTarget === 'logo';
         const setUploading = isLogo ? setLogoUploading : setCoverUploading;
-        const setUrl = isLogo ? setLogoUrl : setCoverUrl;
-        const field = isLogo ? 'logo_url' : 'cover_photo_url';
 
         setUploading(true);
-        const ext = 'jpg';
-        const path = `${venueId}/${isLogo ? 'logo' : 'cover'}-${Date.now()}.${ext}`;
-
-        // const { error: uploadErr } = await supabase.storage
-        //     .from('venue-assets')
-        //     .upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-
-        // if (uploadErr) {
-        //     toast.error('Upload failed: ' + uploadErr.message);
-        //     setUploading(false);
-        //     return;
-        // }
-
-        // const { data: urlData } = supabase.storage
-        //     .from('venue-assets')
-        //     .getPublicUrl(path);
-
-        // setUrl(urlData.publicUrl);
-        // setUploading(false);
-        // autoSave(field, urlData.publicUrl);
+        // TODO: call venueImagesUpload(formData) and set the returned publicUrl
+        setUploading(false);
         if (isLogo) setErrors((e) => ({ ...e, logo: '' }));
         else setErrors((e) => ({ ...e, cover: '' }));
+    };
+
+    const handleGallerySelect = async (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        const toProcess = files.slice(0, 10 - galleryUrls.length);
+
+        for (const file of toProcess) {
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error(`"${file.name}" exceeds 5MB limit.`);
+                continue;
+            }
+            setGalleryUploading(true);
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = reader.result as string;
+                setGalleryUrls((prev) => {
+                    const updated = [...prev, dataUrl];
+                    autoSave('gallery_urls', updated);
+                    return updated;
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        setGalleryUploading(false);
+        e.target.value = '';
+    };
+
+    const handleGalleryRemove = (url: string) => {
+        const updated = galleryUrls.filter((u) => u !== url);
+        setGalleryUrls(updated);
+        autoSave('gallery_urls', updated);
+    };
+
+    const handleMapChange = (lat: number, lng: number) => {
+        setLatitude(lat);
+        setLongitude(lng);
+        autoSave('latitude', lat);
+        autoSave('longitude', lng);
     };
 
     const clearError = (field: string) =>
@@ -185,6 +420,14 @@ const StepVenueProfile = ({
             delete next[field];
             return next;
         });
+
+    if (isLoadingDetails) {
+        return (
+            <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -237,23 +480,63 @@ const StepVenueProfile = ({
                 )}
             </div>
 
-            {/* City */}
-            <div className="space-y-1.5" data-error={!!errors.city}>
-                <Label>City *</Label>
-                <Input
-                    value={city}
-                    onChange={(e) => {
-                        setCity(e.target.value);
-                        clearError('city');
-                    }}
-                    onBlur={() => {
-                        if (city) autoSave('city', city);
-                    }}
-                    className={cn(errors.city && 'border-destructive')}
-                />
-                {errors.city && (
-                    <p className="text-xs text-destructive">{errors.city}</p>
-                )}
+            {/* City + State */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5" data-error={!!errors.city}>
+                    <Label>City *</Label>
+                    <Input
+                        value={city}
+                        onChange={(e) => {
+                            setCity(e.target.value);
+                            clearError('city');
+                        }}
+                        onBlur={() => {
+                            if (city) autoSave('city', city);
+                        }}
+                        className={cn(errors.city && 'border-destructive')}
+                    />
+                    {errors.city && (
+                        <p className="text-xs text-destructive">
+                            {errors.city}
+                        </p>
+                    )}
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label>State</Label>
+                    <Input
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        onBlur={() => {
+                            if (state) autoSave('state', state);
+                        }}
+                    />
+                </div>
+            </div>
+
+            {/* Country + Pincode */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                    <Label>Country</Label>
+                    <Input
+                        value={country}
+                        onChange={(e) => setCountry(e.target.value)}
+                        onBlur={() => {
+                            if (country) autoSave('country', country);
+                        }}
+                    />
+                </div>
+
+                <div className="space-y-1.5">
+                    <Label>Pincode</Label>
+                    <Input
+                        value={pincode}
+                        onChange={(e) => setPincode(e.target.value)}
+                        onBlur={() => {
+                            if (pincode) autoSave('pincode', pincode);
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Description */}
@@ -398,6 +681,43 @@ const StepVenueProfile = ({
                 />
                 {errors.cover && (
                     <p className="text-xs text-destructive">{errors.cover}</p>
+                )}
+            </div>
+
+            {/* Gallery Upload */}
+            <div className="space-y-1.5">
+                <Label>Venue Gallery (optional)</Label>
+                <p className="text-xs text-muted-foreground">
+                    Showcase your courts, amenities, and facilities. Up to 10
+                    photos.
+                </p>
+                <GalleryUpload
+                    images={galleryUrls}
+                    onAdd={handleGallerySelect}
+                    onRemove={handleGalleryRemove}
+                    uploading={galleryUploading}
+                />
+            </div>
+
+            {/* Map Location Picker */}
+            <div className="space-y-1.5">
+                <Label className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4" />
+                    Venue Location on Map (optional)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                    Click on the map or drag the marker to pin your exact
+                    location.
+                </p>
+                <MapLocationPicker
+                    latitude={latitude}
+                    longitude={longitude}
+                    onChange={handleMapChange}
+                />
+                {latitude && longitude && (
+                    <p className="text-xs text-muted-foreground">
+                        📍 Location pinned successfully
+                    </p>
                 )}
             </div>
 

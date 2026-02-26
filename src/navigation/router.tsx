@@ -1,5 +1,5 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { AuthWrapper, ProtectedComponentWrapper } from '../utils/wrapper';
+import { AuthWrapper, DashboardWrapper, ProtectedComponentWrapper } from '../utils/wrapper';
 import Login from '../screens/Login';
 import { path } from './commanPaths';
 import Dashboard from '../screens/Dashboard';
@@ -21,6 +21,6 @@ export const router = createBrowserRouter([
     },
     {
         path: path.dashboard,
-        element: <ProtectedComponentWrapper children={<Dashboard />} />,
+        element: <DashboardWrapper children={<Dashboard />} />,
     },
 ]);

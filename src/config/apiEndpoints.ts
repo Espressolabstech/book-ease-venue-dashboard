@@ -9,4 +9,6 @@ export const endpoints = {
     venueImagesUpload: '/onboard/venue/images/upload',
     courtImagesUpload: '/onboard/court/images/upload',
     venueOnboard: '/onboard/venue',
+    isOnBoarded: '/onboard/venue/is-onboarded',
+    getOnBoardedVenueDetails: '/onboard/venue/details',
 };

@@ -1,43 +1,91 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Phone, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
-import { managerLogin } from '../../api/adapters/auth';
+import { managerLogin, resendOtp, verifyOtp } from '../../api/adapters/auth';
+import { setToken } from '../../utils/cookies.helpers';
+import { toast } from 'sonner';
+import { path } from '../../navigation/commanPaths';
+import { isOnBoarded } from '../../api/adapters/onBoard';
+
+const RESEND_COOLDOWN = 60;
 
 const Login = () => {
     const [step, setStep] = useState<'phone' | 'otp'>('phone');
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
+    const [resendTimer, setResendTimer] = useState(0);
     const navigate = useNavigate();
 
-    const loc = useLocation();
-    const returnTo = (loc.state as any)?.from || '/';
+    useEffect(() => {
+        if (resendTimer <= 0) return;
+        const interval = setInterval(() => {
+            setResendTimer((prev) => prev - 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [resendTimer]);
 
-    const {
-        mutate: login,
-        isPending,
-        isError,
-        error,
-    } = useMutation({
+    const { mutate: login, isPending } = useMutation({
         mutationFn: (data: ManagerLogin) => managerLogin(data),
         onSuccess: () => {
-            navigate(returnTo);
+            setStep('otp');
+            setOtp('');
+            setResendTimer(RESEND_COOLDOWN);
+            toast.success('OTP sent successfully!');
         },
-        onError: (err) => {
-            console.error('Login failed:', err);
+        onError: (error) => {
+            toast.error(error.message);
         },
     });
 
+    const { mutate: verifyOtpMutation, isPending: isOtpPending } = useMutation({
+        mutationFn: (data: VerifyOtp) => verifyOtp(data),
+        onSuccess: async (data) => {
+            setToken(data.data.token);
+            toast.success('Login successful!');
+            try {
+                const onboardedData = await isOnBoarded();
+                navigate(
+                    onboardedData.data.isOnBoarded
+                        ? path.dashboard
+                        : path.onBoarding,
+                );
+            } catch {
+                navigate(path.dashboard);
+            }
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        },
+    });
+
+    const { mutate: resendOtpMutation, isPending: isResendOtpPending } =
+        useMutation({
+            mutationFn: (data: ResendOtp) => resendOtp(data),
+            onSuccess: () => {
+                toast.success('OTP resent successfully!');
+                setResendTimer(RESEND_COOLDOWN);
+            },
+            onError: (error) => {
+                toast.error(error.message);
+            },
+        });
+
     const handlePhoneSubmit = () => {
+        if (!phone.trim()) return;
         login({ phone });
     };
 
     const handleOtpSubmit = () => {
-        // if (otp.trim()) {
-        //     login({ phone, otp });
-        // }
+        if (!otp.trim()) return;
+        verifyOtpMutation({ phone, otp });
+    };
+
+    const handleResend = () => {
+        if (resendTimer > 0 || isResendOtpPending) return;
+        resendOtpMutation({ phone });
     };
 
     return (
@@ -93,9 +141,9 @@ const Login = () => {
                                 <Button
                                     onClick={handlePhoneSubmit}
                                     className="w-full"
-                                    disabled={!phone.trim()}
+                                    disabled={!phone.trim() || isPending}
                                 >
-                                    Send OTP
+                                    {isPending ? 'Sending...' : 'Send OTP'}
                                     <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
                             </div>
@@ -140,32 +188,49 @@ const Login = () => {
                                     type="number"
                                 />
 
-                                {isError && (
-                                    <p className="text-sm text-destructive text-center">
-                                        {(error as any)?.message ||
-                                            'Verification failed. Please try again.'}
-                                    </p>
-                                )}
-
                                 <Button
                                     onClick={handleOtpSubmit}
                                     className="w-full"
-                                    disabled={!otp.trim() || isPending}
+                                    disabled={!otp.trim() || isOtpPending}
                                 >
-                                    {isPending
+                                    {isOtpPending
                                         ? 'Verifying...'
                                         : 'Verify & Continue'}
                                     <ArrowRight className="h-4 w-4 ml-2" />
                                 </Button>
 
                                 <button
-                                    className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors"
-                                    onClick={() => {}}
+                                    className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-muted-foreground"
+                                    onClick={handleResend}
+                                    disabled={
+                                        resendTimer > 0 || isResendOtpPending
+                                    }
                                 >
-                                    Didn't receive a code?{' '}
-                                    <span className="font-medium text-primary">
-                                        Resend
-                                    </span>
+                                    {isResendOtpPending ? (
+                                        'Resending...'
+                                    ) : resendTimer > 0 ? (
+                                        <>
+                                            Resend OTP in{' '}
+                                            <span className="font-medium text-primary">
+                                                {String(
+                                                    Math.floor(
+                                                        resendTimer / 60,
+                                                    ),
+                                                ).padStart(2, '0')}
+                                                :
+                                                {String(
+                                                    resendTimer % 60,
+                                                ).padStart(2, '0')}
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            Didn't receive a code?{' '}
+                                            <span className="font-medium text-primary">
+                                                Resend
+                                            </span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </>
