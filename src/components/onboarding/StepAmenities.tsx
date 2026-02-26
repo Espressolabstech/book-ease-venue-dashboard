@@ -72,41 +72,11 @@ const StepAmenities = ({
     const saveAmenities = async () => {
         onSaving(true);
 
-        // Delete existing
-        // await supabase.from('venue_amenities').delete().eq('venue_id', venueId);
+        const amenities: { name: string; is_custom: boolean }[] = [];
+        selected.forEach((name) => amenities.push({ name, is_custom: false }));
+        customAmenities.forEach((name) => amenities.push({ name, is_custom: true }));
 
-        // Find group for each selected amenity
-        const rows: any[] = [];
-        selected.forEach((name) => {
-            const group = AMENITY_GROUPS.find((g) => g.items.includes(name));
-            rows.push({
-                venue_id: venueId,
-                name,
-                category: group?.label || 'Other',
-                is_custom: false,
-            });
-        });
-
-        customAmenities.forEach((name) => {
-            rows.push({
-                venue_id: venueId,
-                name,
-                category: 'Custom',
-                is_custom: true,
-            });
-        });
-
-        if (rows.length > 0) {
-            // const { error } = await supabase
-            //     .from('venue_amenities')
-            //     .insert(rows);
-            // if (error) {
-            //     toast.error('Failed to save: ' + error.message);
-            //     onSaving(false);
-            //     return false;
-            // }
-        }
-
+        sessionStorage.setItem('onboarding_step4', JSON.stringify(amenities));
         onSaving(false);
         onSaved();
         return true;

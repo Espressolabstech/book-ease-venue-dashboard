@@ -1,5 +1,6 @@
 export const path = {
     dashboard: '/',
     login: '/login',
-    onBoarding: '/onboarding/:venueId/step/:step',
+    venueInvite: '/venue-invite',
+    onBoarding: '/onboarding/:venueId/:token/step/:step',
 };

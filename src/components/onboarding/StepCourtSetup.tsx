@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEFAULT_HOURS, PADEL_SURFACES, PICKLEBALL_SURFACES } from '../../utils/court';
 import type { DaySchedule } from './ScheduleBuilder';
 import { toast } from 'sonner';
+import { getCourtImageUploadUrls, uploadToPresignedUrl } from '../../api/adapters/onBoard';
 import { Loader2, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
@@ -40,9 +41,15 @@ const StepCourtSetup = ({
     const [photoUploading, setPhotoUploading] = useState(false);
     const [venueHours, setVenueHours] = useState<DaySchedule[]>([]);
 
-    // Load courts + venue hours
+    // Load courts + venue hours from sessionStorage
     useEffect(() => {
         (async () => {
+            try {
+                const savedCourts = sessionStorage.getItem('onboarding_step3');
+                if (savedCourts) setCourts(JSON.parse(savedCourts));
+                const savedHours = sessionStorage.getItem('onboarding_step2');
+                if (savedHours) setVenueHours(JSON.parse(savedHours));
+            } catch {}
             // const [courtsRes, hoursRes] = await Promise.all([
             //     supabase
             //         .from('venue_courts')
@@ -141,17 +148,7 @@ const StepCourtSetup = ({
         if (!validateForm()) return;
         onSaving(true);
 
-        const courtData = {
-            venue_id: venueId,
-            name: form.name,
-            sport: form.sport,
-            surface_material: form.surface_material,
-            is_indoor: form.is_indoor,
-            hours_type: form.hours_type,
-            photo_url: form.photo_url,
-        };
-
-        let courtId =
+        const courtId =
             form.id || (editIndex !== null ? courts[editIndex]?.id : undefined);
 
         if (courtId) {
@@ -235,21 +232,20 @@ const StepCourtSetup = ({
         }
 
         setPhotoUploading(true);
-        const path = `${venueId}/court-${Date.now()}.jpg`;
-        // const { error } = await supabase.storage
-        //     .from('venue-assets')
-        //     .upload(path, file, { upsert: true });
-        // if (error) {
-        //     toast.error(error.message);
-        //     setPhotoUploading(false);
-        //     return;
-        // }
-        // const { data } = supabase.storage
-        //     .from('venue-assets')
-        //     .getPublicUrl(path);
-        // setForm((f) => ({ ...f, photo_url: data.publicUrl }));
-        setPhotoUploading(false);
-        e.target.value = '';
+        try {
+            const res = await getCourtImageUploadUrls({
+                venueId,
+                images: [{ type: 'PHOTO', mimetype: file.type || 'image/jpeg' }],
+            });
+            const { uploadUrl, publicUrl } = res.data[0];
+            await uploadToPresignedUrl(uploadUrl, file, file.type || 'image/jpeg');
+            setForm((f) => ({ ...f, photo_url: publicUrl }));
+        } catch (err: any) {
+            toast.error(err?.message || 'Photo upload failed');
+        } finally {
+            setPhotoUploading(false);
+            e.target.value = '';
+        }
     };
 
     const surfaces =
@@ -277,13 +273,8 @@ const StepCourtSetup = ({
             onSaveComplete(false);
             return;
         }
-        (async () => {
-            // await supabase
-            //     .from('onboarding_progress')
-            //     .update({ current_step: 3 })
-            //     .eq('venue_id', venueId);
-            onSaveComplete(true);
-        })();
+        sessionStorage.setItem('onboarding_step3', JSON.stringify(courts));
+        onSaveComplete(true);
     }, [triggerSave]); // eslint-disable-line
 
     // Save & Exit

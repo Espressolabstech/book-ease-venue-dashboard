@@ -10,27 +10,12 @@ import StepBookingRules from '../../components/onboarding/StepBookingRules';
 import StepPayoutDetails from '../../components/onboarding/StepPayoutDetails';
 import StepReview from '../../components/onboarding/StepReview';
 
-// TODO: Replace with real API data
-const DUMMY_VENUE = {
-    id: 'venue-001',
-    name: 'Greenfield Sports Complex',
-    status: 'draft',
-    description: 'A premier multi-sport facility in the heart of the city.',
-    address: '123 Court Lane, Melbourne VIC 3000',
-    phone: '+61 3 9999 0000',
-    email: 'info@greenfieldsports.com.au',
-    website: 'https://greenfieldsports.com.au',
-    logo_url: null,
-    cover_url: null,
-};
-
-const DUMMY_PROGRESS = {
-    venue_id: 'venue-001',
-    current_step: 2,
-};
-
 const OnBoarding = () => {
-    const { venueId, step } = useParams<{ venueId: string; step: string }>();
+    const { venueId, token, step } = useParams<{
+        venueId: string;
+        token: string;
+        step: string;
+    }>();
     const navigate = useNavigate();
     const currentStep = parseInt(step || '1');
 
@@ -40,8 +25,8 @@ const OnBoarding = () => {
     const [triggerExit, setTriggerExit] = useState(false);
     const [isContinuing, setIsContinuing] = useState(false);
 
-    const venue = DUMMY_VENUE;
-    const progress = DUMMY_PROGRESS;
+    const venue = null;
+    const progress = { venue_id: venueId!, current_step: currentStep };
 
     const handleSaving = useCallback((v: boolean) => {
         setSaving(v);
@@ -61,7 +46,7 @@ const OnBoarding = () => {
         setTriggerSave(false);
         setIsContinuing(false);
         if (success && currentStep < 8) {
-            navigate(`/onboarding/${venueId}/step/${currentStep + 1}`);
+            navigate(`/onboarding/${venueId}/${token}/step/${currentStep + 1}`);
         }
     };
 
@@ -109,6 +94,7 @@ const OnBoarding = () => {
     return (
         <OnBoardingLayout
             venueId={venueId!}
+            token={token!}
             venue={venue}
             progress={progress}
             currentStep={currentStep}

@@ -1,9 +1,10 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { AuthWrapper, DashboardWrapper, ProtectedComponentWrapper } from '../utils/wrapper';
 import Login from '../screens/Login';
 import { path } from './commanPaths';
 import Dashboard from '../screens/Dashboard';
 import OnBoarding from '../screens/OnBoarding';
+import VenueInvite from '../screens/VenueInvite';
 
 export const router = createBrowserRouter([
     {
@@ -11,9 +12,8 @@ export const router = createBrowserRouter([
         element: <AuthWrapper children={<Login />} />,
     },
     {
-        // Shortcut: /onboarding → step 1 with dummy venue id
-        path: '/onboarding',
-        element: <Navigate to="/onboarding/venue-001/step/1" replace />,
+        path: path.venueInvite,
+        element: <VenueInvite />,
     },
     {
         path: path.onBoarding,

@@ -45,12 +45,20 @@ const Login = () => {
         onSuccess: async (data) => {
             setToken(data.data.token);
             toast.success('Login successful!');
+
+            const inviteVenueId = sessionStorage.getItem('inviteVenueId');
+            const inviteToken = sessionStorage.getItem('inviteToken');
+            if (inviteVenueId && inviteToken) {
+                navigate(`/onboarding/${inviteVenueId}/${inviteToken}/step/1`);
+                return;
+            }
+
             try {
                 const onboardedData = await isOnBoarded();
                 navigate(
                     onboardedData.data.isOnBoarded
                         ? path.dashboard
-                        : path.onBoarding,
+                        : '/onboarding',
                 );
             } catch {
                 navigate(path.dashboard);

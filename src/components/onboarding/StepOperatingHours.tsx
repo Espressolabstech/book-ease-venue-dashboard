@@ -5,7 +5,6 @@ import { DEFAULT_SCHEDULE } from '../../utils/days';
 
 const StepOperatingHours = ({
     venueId,
-    onNext,
     onSaving,
     onSaved,
     triggerSave,
@@ -73,23 +72,7 @@ const StepOperatingHours = ({
         //     .delete()
         //     .eq('venue_id', venueId);
 
-        const rows = schedule.map((d) => ({
-            venue_id: venueId,
-            day_of_week: d.day_of_week,
-            is_open: d.is_open,
-            opening_time: d.is_open ? d.opening_time : null,
-            closing_time: d.is_open ? d.closing_time : null,
-        }));
-
-        // const { error } = await (supabase as any)
-        //     .from('venue_hours')
-        //     .insert(rows);
-        // if (error) {
-        //     toast.error('Failed to save: ' + error.message);
-        //     onSaving(false);
-        //     return false;
-        // }
-
+        sessionStorage.setItem('onboarding_step2', JSON.stringify(schedule));
         onSaving(false);
         onSaved();
         return true;

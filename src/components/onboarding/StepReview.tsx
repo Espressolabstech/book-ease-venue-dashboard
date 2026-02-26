@@ -6,78 +6,184 @@ import { cn } from '../../utils/twMerge';
 import { DAYS } from '../../utils/days';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { venueOnboard } from '../../api/adapters/onBoard';
+import { path } from '../../navigation/commanPaths';
 
 const StepReview = ({
     venueId,
-    venue,
     triggerSave,
     onSaveComplete,
     triggerExit,
     onExitComplete,
 }: StepReviewProps) => {
     const navigate = useNavigate();
-    const [hours, setHours] = useState<any[]>([]);
-    const [courts, setCourts] = useState<any[]>([]);
-    const [amenities, setAmenities] = useState<any[]>([]);
-    const [pricing, setPricing] = useState<any[]>([]);
-    const [rules, setRules] = useState<any>(null);
-    const [payout, setPayout] = useState<any>(null);
+    const { token: urlToken } = useParams<{ token: string }>();
     const [agreed, setAgreed] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [termsOpen, setTermsOpen] = useState(false);
-    const [loaded, setLoaded] = useState(false);
+
+    const [step1, setStep1] = useState<any>(null);
+    const [step2, setStep2] = useState<any[]>([]);
+    const [step3, setStep3] = useState<any[]>([]);
+    const [step4, setStep4] = useState<any[]>([]);
+    const [step5, setStep5] = useState<Record<string, any>>({});
+    const [step6, setStep6] = useState<any>(null);
+    const [step7, setStep7] = useState<any>(null);
 
     useEffect(() => {
-        (async () => {
-            // const [hoursRes, courtsRes, amenRes, rulesRes, payoutRes] =
-            //     await Promise.all([
-            //         supabase
-            //             .from('venue_hours')
-            //             .select('*')
-            //             .eq('venue_id', venueId)
-            //             .order('day_of_week'),
-            //         supabase
-            //             .from('venue_courts')
-            //             .select('*')
-            //             .eq('venue_id', venueId)
-            //             .order('created_at'),
-            //         supabase
-            //             .from('venue_amenities')
-            //             .select('*')
-            //             .eq('venue_id', venueId),
-            //         supabase
-            //             .from('venue_booking_rules')
-            //             .select('*')
-            //             .eq('venue_id', venueId)
-            //             .maybeSingle(),
-            //         supabase
-            //             .from('venue_payout_details')
-            //             .select('*')
-            //             .eq('venue_id', venueId)
-            //             .maybeSingle(),
-            //     ]);
-
-            // setHours(hoursRes.data || []);
-            // setCourts(courtsRes.data || []);
-            // setAmenities(amenRes.data || []);
-            // setRules(rulesRes.data);
-            // setPayout(payoutRes.data);
-
-            // if (courtsRes.data && courtsRes.data.length > 0) {
-            //     // const { data: pData } = await supabase
-            //     //     .from('court_pricing')
-            //     //     .select('*')
-            //     //     .in(
-            //     //         'court_id',
-            //     //         courtsRes.data.map((c: any) => c.id),
-            //     //     );
-            //     // setPricing(pData || []);
-            // }
-
-            setLoaded(true);
-        })();
+        try {
+            const s1 = sessionStorage.getItem('onboarding_step1');
+            const s2 = sessionStorage.getItem('onboarding_step2');
+            const s3 = sessionStorage.getItem('onboarding_step3');
+            const s4 = sessionStorage.getItem('onboarding_step4');
+            const s5 = sessionStorage.getItem('onboarding_step5');
+            const s6 = sessionStorage.getItem('onboarding_step6');
+            const s7 = sessionStorage.getItem('onboarding_step7');
+            if (s1) setStep1(JSON.parse(s1));
+            if (s2) setStep2(JSON.parse(s2));
+            if (s3) setStep3(JSON.parse(s3));
+            if (s4) setStep4(JSON.parse(s4));
+            if (s5) setStep5(JSON.parse(s5));
+            if (s6) setStep6(JSON.parse(s6));
+            if (s7) setStep7(JSON.parse(s7));
+        } catch {}
     }, [venueId]);
+
+    const buildPayload = (): VenueOnboardRequestData => {
+        const token = urlToken || '';
+
+        // ── Images ────────────────────────────────────────────────────
+        const venueImages: VenueOnboardRequestData['venueImages'] = [];
+        if (step1?.logoUrl)
+            venueImages.push({ publicUrl: step1.logoUrl, type: 'LOGO' });
+        if (step1?.coverUrl)
+            venueImages.push({ publicUrl: step1.coverUrl, type: 'COVER' });
+        (step1?.galleryUrls || []).forEach((url: string, i: number) =>
+            venueImages.push({ publicUrl: url, type: 'GALLERY', order: i }),
+        );
+
+        // ── Venue hours (open days only) ──────────────────────────────
+        const venueHours = step2
+            .filter((d: any) => d.is_open)
+            .map((d: any) => ({
+                dayOfWeek: d.day_of_week,
+                openTime: d.opening_time,
+                closeTime: d.closing_time,
+            }));
+
+        // ── Mapping tables ────────────────────────────────────────────
+        const SPORT_MAP: Record<string, string> = {
+            Pickleball: 'PICKELBALL',
+            Padel: 'PADEL',
+        };
+        const SURFACE_MAP: Record<string, string> = {
+            'Artificial Grass': 'ARTIFICIAL_GRASS',
+            'Sand-Filled Artificial Grass': 'SAND_FILLED_ARTIFICIAL_GRASS',
+            'Panoramic Glass': 'PANORAMIC_GLASS',
+            'Crystal Glass': 'CRYSTAL_GLASS',
+            Asphalt: 'ASPHALT',
+            Concrete: 'CONCRETE',
+            'Cushioned Acrylic': 'CUSHIONED_ACRYLIC',
+            'Artificial Turf': 'ARTIFICIAL_TURF',
+        };
+        const DAY_TO_INT: Record<string, number> = {
+            Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+            Thursday: 4, Friday: 5, Saturday: 6,
+        };
+
+        // ── Courts ────────────────────────────────────────────────────
+        const courts = step3.map((court: any, i: number) => {
+            const pricing = step5[String(i)];
+
+            // Use custom hours when set, otherwise fall back to venue open hours
+            const timeSlots =
+                court.hours_type === 'custom'
+                    ? court.custom_hours
+                          .filter((h: any) => h.is_open)
+                          .map((h: any) => ({
+                              dayOfWeek: h.day_of_week,
+                              startTime: h.opening_time,
+                              endTime: h.closing_time,
+                          }))
+                    : venueHours.map((h) => ({
+                          dayOfWeek: h.dayOfWeek,
+                          startTime: h.openTime,
+                          endTime: h.closeTime,
+                      }));
+
+            const weekendDaysInt = pricing?.weekend_rate_enabled
+                ? (pricing.weekend_days as string[]).map(
+                      (d) => DAY_TO_INT[d] ?? parseInt(d),
+                  )
+                : undefined;
+
+            const courtObj: any = {
+                name: court.name,
+                sport: SPORT_MAP[court.sport] ?? court.sport.toUpperCase(),
+                courtEnvironment: court.is_indoor ? 'INDOOR' : 'OUTDOOR',
+                surface: SURFACE_MAP[court.surface_material] ?? court.surface_material,
+                timeSlots,
+                pricing: pricing
+                    ? {
+                          pricePerHour: parseFloat(pricing.base_rate) || 0,
+                          ...(pricing.weekend_rate_enabled && {
+                              weekendPricePerHour: parseFloat(pricing.weekend_rate),
+                              weekendDays: weekendDaysInt,
+                          }),
+                      }
+                    : undefined,
+                ...(pricing?.peak_enabled && {
+                    peakHourPricings: [
+                        {
+                            startTime: pricing.peak_time_start,
+                            endTime: pricing.peak_time_end,
+                            pricePerHour: parseFloat(pricing.peak_rate) || 0,
+                        },
+                    ],
+                }),
+            };
+
+            // Only include images field if there is a photo (backend rejects empty array)
+            if (court.photo_url) {
+                courtObj.images = [{ publicUrl: court.photo_url }];
+            }
+
+            return courtObj;
+        });
+
+        const maxBookings = step6?.maxBookings
+            ? parseInt(step6.maxBookings)
+            : undefined;
+
+        return {
+            token,
+            venueName: step1?.venueName || '',
+            description: step1?.description,
+            venuemail: step1?.venuemail || '',
+            venuePhone: step1?.venuePhone || '',
+            venueAddress: step1?.venueAddress || '',
+            city: step1?.city || '',
+            state: step1?.state,
+            country: step1?.country,
+            pincode: step1?.pincode,
+            latitude: step1?.latitude,
+            longitude: step1?.longitude,
+            venueImages,
+            venueHours,
+            amenities: step4.map((a: any) => ({ name: a.name })),
+            courts,
+            advanceBookingDays: step6?.advanceDays,
+            minimumNoticeMinutes: step6 ? step6.minNotice * 60 : undefined,
+            cancellationPolicy: step6?.cancellationPolicy?.toUpperCase(),
+            maxBookingPerPlayerDay: maxBookings,
+            bankName: step7?.bankName || '',
+            accountNumber: step7?.accountNumber || '',
+            ifscCode: step7?.ifscCode || '',
+            accountHolderName: step7?.holderName || '',
+            payOutSchedule: step7?.schedule?.toUpperCase(),
+        };
+    };
 
     const submitForReview = async () => {
         if (!agreed) {
@@ -85,38 +191,22 @@ const StepReview = ({
             return;
         }
         setSubmitting(true);
-
         try {
-            // await supabase
-            //     .from('venues')
-            //     .update({
-            //         status: 'pending_review',
-            //         submitted_at: new Date().toISOString(),
-            //     })
-            //     .eq('id', venueId);
-
-            // if (venue?.invitation_id) {
-            //     await supabase
-            //         .from('venue_invitations')
-            //         .update({ status: 'submitted' })
-            //         .eq('id', venue.invitation_id);
-            // }
-
-            // await supabase
-            //     .from('onboarding_progress')
-            //     .update({ current_step: 8 })
-            //     .eq('venue_id', venueId);
-
-            toast.success('Venue submitted for review!');
-            navigate(`/onboarding/${venueId}/submitted`, { replace: true });
+            await venueOnboard(buildPayload());
+            [1, 2, 3, 4, 5, 6, 7].forEach((n) =>
+                sessionStorage.removeItem(`onboarding_step${n}`),
+            );
+            sessionStorage.removeItem('inviteToken');
+            sessionStorage.removeItem('inviteVenueId');
+            toast.success('Venue onboarded!');
+            navigate(path.dashboard);
         } catch (err: any) {
-            toast.error('Submission failed. Please try again.');
+            toast.error(err?.message || 'Submission failed. Please try again.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Save & Continue = Submit
     useEffect(() => {
         if (!triggerSave) return;
         (async () => {
@@ -135,10 +225,8 @@ const StepReview = ({
         onExitComplete();
     }, [triggerExit]); // eslint-disable-line
 
-    if (!loaded) return null;
-
     const editStep = (step: number) =>
-        navigate(`/onboarding/${venueId}/step/${step}`);
+        navigate(`/onboarding/${venueId}/${urlToken}/step/${step}`);
 
     const SectionCard = ({
         title,
@@ -173,19 +261,8 @@ const StepReview = ({
         return code.slice(0, 4) + '****' + code.slice(-2);
     };
 
-    const courtPricing = (courtId: string) =>
-        pricing.find((p: any) => p.court_id === courtId);
-
-    const standardAmenities = amenities.filter((a: any) => !a.is_custom);
-    const customAmenities = amenities.filter((a: any) => a.is_custom);
-
-    // Group standard amenities by category
-    const amenityGroups: Record<string, string[]> = {};
-    standardAmenities.forEach((a: any) => {
-        const cat = a.category || 'Other';
-        if (!amenityGroups[cat]) amenityGroups[cat] = [];
-        amenityGroups[cat].push(a.name);
-    });
+    const standardAmenities = step4.filter((a: any) => !a.is_custom);
+    const customAmenities = step4.filter((a: any) => a.is_custom);
 
     return (
         <div className="space-y-6">
@@ -199,19 +276,18 @@ const StepReview = ({
                 </p>
             </div>
 
-            {/* Card 1: Venue Profile */}
             <SectionCard title="Venue Profile" step={1}>
                 <div className="space-y-4">
-                    {venue?.cover_photo_url && (
+                    {step1?.coverUrl && (
                         <div className="relative h-[180px] rounded-lg overflow-hidden">
                             <img
-                                src={venue.cover_photo_url}
+                                src={step1.coverUrl}
                                 alt="Cover"
                                 className="h-full w-full object-cover"
                             />
-                            {venue?.logo_url && (
+                            {step1?.logoUrl && (
                                 <img
-                                    src={venue.logo_url}
+                                    src={step1.logoUrl}
                                     alt="Logo"
                                     className="absolute bottom-3 left-3 h-12 w-12 rounded-full border-2 border-card object-cover"
                                 />
@@ -221,48 +297,39 @@ const StepReview = ({
                     <div className="grid gap-2 text-sm">
                         <div>
                             <span className="text-muted-foreground">Name:</span>{' '}
-                            <span className="font-medium">{venue?.name}</span>
+                            <span className="font-medium">{step1?.venueName}</span>
                         </div>
                         <div>
                             <span className="text-muted-foreground">City:</span>{' '}
-                            {venue?.city}
+                            {step1?.city}
                         </div>
                         <div>
-                            <span className="text-muted-foreground">
-                                Address:
-                            </span>{' '}
-                            {venue?.address}
+                            <span className="text-muted-foreground">Address:</span>{' '}
+                            {step1?.venueAddress}
                         </div>
-                        {venue?.description && (
+                        {step1?.description && (
                             <div>
-                                <span className="text-muted-foreground">
-                                    Description:
-                                </span>{' '}
-                                {venue?.description}
+                                <span className="text-muted-foreground">Description:</span>{' '}
+                                {step1.description}
                             </div>
                         )}
                         <div>
-                            <span className="text-muted-foreground">
-                                Email:
-                            </span>{' '}
-                            {venue?.contact_email}
+                            <span className="text-muted-foreground">Email:</span>{' '}
+                            {step1?.venuemail}
                         </div>
-                        {venue?.whatsapp_number && (
+                        {step1?.venuePhone && (
                             <div>
-                                <span className="text-muted-foreground">
-                                    WhatsApp:
-                                </span>{' '}
-                                +91 {venue?.whatsapp_number}
+                                <span className="text-muted-foreground">WhatsApp:</span>{' '}
+                                +91 {step1.venuePhone}
                             </div>
                         )}
                     </div>
                 </div>
             </SectionCard>
 
-            {/* Card 2: Operating Hours */}
             <SectionCard title="Operating Hours" step={2}>
                 <div className="space-y-1">
-                    {hours.map((h: any) => (
+                    {step2.map((h: any) => (
                         <div
                             key={h.day_of_week}
                             className={cn(
@@ -270,18 +337,12 @@ const StepReview = ({
                                 !h.is_open && 'opacity-50',
                             )}
                         >
-                            <span className="font-medium">
-                                {DAYS[h.day_of_week]}
-                            </span>
+                            <span className="font-medium">{DAYS[h.day_of_week]}</span>
                             <span>
                                 {h.is_open ? (
-                                    <span>
-                                        {h.opening_time} – {h.closing_time}
-                                    </span>
+                                    <span>{h.opening_time} – {h.closing_time}</span>
                                 ) : (
-                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                                        Closed
-                                    </span>
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Closed</span>
                                 )}
                             </span>
                         </div>
@@ -289,22 +350,15 @@ const StepReview = ({
                 </div>
             </SectionCard>
 
-            {/* Card 3: Courts */}
             <SectionCard title="Courts" step={3}>
-                {courts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">
-                        No courts added
-                    </p>
+                {step3.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No courts added</p>
                 ) : (
                     <div className="space-y-3">
-                        {courts.map((c: any) => (
-                            <div key={c.id} className="flex items-center gap-3">
+                        {step3.map((c: any, i: number) => (
+                            <div key={i} className="flex items-center gap-3">
                                 {c.photo_url ? (
-                                    <img
-                                        src={c.photo_url}
-                                        alt={c.name}
-                                        className="h-10 w-10 rounded-lg object-cover"
-                                    />
+                                    <img src={c.photo_url} alt={c.name} className="h-10 w-10 rounded-lg object-cover" />
                                 ) : (
                                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-lg">
                                         {c.sport === 'Padel' ? '🏸' : '🏓'}
@@ -312,26 +366,18 @@ const StepReview = ({
                                 )}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium truncate">
-                                            {c.name}
-                                        </span>
-                                        <span
-                                            className={cn(
-                                                'rounded-full px-2 py-0.5 text-[10px] font-bold',
-                                                c.sport === 'Padel'
-                                                    ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
-                                                    : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))]',
-                                            )}
-                                        >
+                                        <span className="text-sm font-medium truncate">{c.name}</span>
+                                        <span className={cn(
+                                            'rounded-full px-2 py-0.5 text-[10px] font-bold',
+                                            c.sport === 'Padel'
+                                                ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
+                                                : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))]',
+                                        )}>
                                             {c.sport}
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                        {c.surface_material} ·{' '}
-                                        {c.is_indoor ? 'Indoor' : 'Outdoor'} ·{' '}
-                                        {c.hours_type === 'custom'
-                                            ? 'Custom Hours'
-                                            : 'Default Hours'}
+                                        {c.surface_material} · {c.is_indoor ? 'Indoor' : 'Outdoor'}
                                     </p>
                                 </div>
                             </div>
@@ -340,42 +386,26 @@ const StepReview = ({
                 )}
             </SectionCard>
 
-            {/* Card 4: Amenities */}
             <SectionCard title="Facilities & Amenities" step={4}>
-                {amenities.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">
-                        No amenities added
-                    </p>
+                {step4.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No amenities added</p>
                 ) : (
                     <div className="space-y-3">
-                        {Object.entries(amenityGroups).map(([group, items]) => (
-                            <div key={group}>
-                                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                                    {group}
-                                </p>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {items.map((item) => (
-                                        <span
-                                            key={item}
-                                            className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]"
-                                        >
-                                            {item}
-                                        </span>
-                                    ))}
-                                </div>
+                        {standardAmenities.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                                {standardAmenities.map((a: any) => (
+                                    <span key={a.name} className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]">
+                                        {a.name}
+                                    </span>
+                                ))}
                             </div>
-                        ))}
+                        )}
                         {customAmenities.length > 0 && (
                             <div>
-                                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                                    Your Additions
-                                </p>
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Your Additions</p>
                                 <div className="flex flex-wrap gap-1.5">
                                     {customAmenities.map((a: any) => (
-                                        <span
-                                            key={a.id}
-                                            className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]"
-                                        >
+                                        <span key={a.name} className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]">
                                             {a.name}
                                         </span>
                                     ))}
@@ -386,47 +416,21 @@ const StepReview = ({
                 )}
             </SectionCard>
 
-            {/* Card 5: Pricing */}
             <SectionCard title="Pricing" step={5}>
-                {courts.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">
-                        No pricing configured
-                    </p>
+                {step3.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No pricing configured</p>
                 ) : (
                     <div className="space-y-4">
-                        {courts.map((c: any) => {
-                            const cp = courtPricing(c.id);
+                        {step3.map((c: any, i: number) => {
+                            const p = step5[String(i)];
                             return (
-                                <div key={c.id} className="space-y-1">
-                                    <p className="text-sm font-medium">
-                                        {c.name}
-                                    </p>
+                                <div key={i} className="space-y-1">
+                                    <p className="text-sm font-medium">{c.name}</p>
                                     <div className="text-xs text-muted-foreground space-y-0.5">
-                                        <p>
-                                            Base Rate: ₹{cp?.base_rate || 0}/hr
-                                        </p>
-                                        <p>
-                                            Durations:{' '}
-                                            {(
-                                                (cp?.booking_durations as number[]) || [
-                                                    60,
-                                                ]
-                                            )
-                                                .map((d: number) => `${d} min`)
-                                                .join(', ')}
-                                        </p>
-                                        {cp?.peak_enabled && (
-                                            <p>
-                                                Peak: ₹{cp?.peak_rate}/hr (
-                                                {cp?.peak_time_start} –{' '}
-                                                {cp?.peak_time_end})
-                                            </p>
-                                        )}
-                                        {cp?.weekend_rate_enabled && (
-                                            <p>
-                                                Weekend: ₹{cp?.weekend_rate}/hr
-                                            </p>
-                                        )}
+                                        <p>Base Rate: ₹{p?.base_rate || 0}/hr</p>
+                                        <p>Durations: {((p?.booking_durations as number[]) || [60]).map((d: number) => `${d} min`).join(', ')}</p>
+                                        {p?.peak_enabled && <p>Peak: ₹{p.peak_rate}/hr ({p.peak_time_start} – {p.peak_time_end})</p>}
+                                        {p?.weekend_rate_enabled && <p>Weekend: ₹{p.weekend_rate}/hr</p>}
                                     </div>
                                 </div>
                             );
@@ -435,76 +439,29 @@ const StepReview = ({
                 )}
             </SectionCard>
 
-            {/* Card 6: Booking Rules */}
             <SectionCard title="Booking Rules" step={6}>
-                {!rules ? (
-                    <p className="text-sm text-muted-foreground italic">
-                        Not configured
-                    </p>
+                {!step6 ? (
+                    <p className="text-sm text-muted-foreground italic">Not configured</p>
                 ) : (
                     <div className="text-sm space-y-1">
-                        <p>
-                            <span className="text-muted-foreground">
-                                Advance window:
-                            </span>{' '}
-                            {rules.advance_booking_days} day(s)
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Min notice:
-                            </span>{' '}
-                            {rules.min_notice_hours} hour(s)
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Cancellation:
-                            </span>{' '}
-                            {rules.cancellation_policy}
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Auto-confirm:
-                            </span>{' '}
-                            {rules.auto_confirm ? 'Yes' : 'No'}
-                        </p>
+                        <p><span className="text-muted-foreground">Advance window:</span> {step6.advanceDays} day(s)</p>
+                        <p><span className="text-muted-foreground">Min notice:</span> {step6.minNotice} hour(s)</p>
+                        <p><span className="text-muted-foreground">Cancellation:</span> {step6.cancellationPolicy}</p>
+                        <p><span className="text-muted-foreground">Auto-confirm:</span> {step6.autoConfirm ? 'Yes' : 'No'}</p>
                     </div>
                 )}
             </SectionCard>
 
-            {/* Card 7: Payout Details */}
             <SectionCard title="Payout Details" step={7}>
-                {!payout ? (
-                    <p className="text-sm text-muted-foreground italic">
-                        Not configured
-                    </p>
+                {!step7 ? (
+                    <p className="text-sm text-muted-foreground italic">Not configured</p>
                 ) : (
                     <div className="text-sm space-y-1">
-                        <p>
-                            <span className="text-muted-foreground">Bank:</span>{' '}
-                            {payout.bank_name}
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Holder:
-                            </span>{' '}
-                            {payout.account_holder_name}
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Account:
-                            </span>{' '}
-                            {maskAccount('')}
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">IFSC:</span>{' '}
-                            {maskIfsc(payout.iban || '')}
-                        </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Schedule:
-                            </span>{' '}
-                            {payout.payout_schedule}
-                        </p>
+                        <p><span className="text-muted-foreground">Bank:</span> {step7.bankName}</p>
+                        <p><span className="text-muted-foreground">Holder:</span> {step7.holderName}</p>
+                        <p><span className="text-muted-foreground">Account:</span> {maskAccount(step7.accountNumber || '')}</p>
+                        <p><span className="text-muted-foreground">IFSC:</span> {maskIfsc(step7.ifscCode || '')}</p>
+                        <p><span className="text-muted-foreground">Schedule:</span> {step7.schedule}</p>
                     </div>
                 )}
             </SectionCard>
@@ -518,8 +475,7 @@ const StepReview = ({
                         className="mt-0.5"
                     />
                     <span className="text-sm">
-                        I confirm that the information I have provided is
-                        accurate and complete. I agree to the{' '}
+                        I confirm that the information I have provided is accurate and complete. I agree to the{' '}
                         <button
                             onClick={() => setTermsOpen(true)}
                             className="text-[hsl(var(--admin-navy))] underline font-medium"
@@ -536,66 +492,26 @@ const StepReview = ({
                     className="w-full bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))] hover:bg-[hsl(var(--admin-lime))]/90 h-12 text-base font-semibold"
                 >
                     {submitting ? (
-                        <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />{' '}
-                            Submitting...
-                        </>
+                        <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Submitting...</>
                     ) : (
                         'Submit for Review'
                     )}
                 </Button>
             </div>
 
-            {/* Terms Modal */}
             <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
                 <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>
-                            Venue Partner Terms & Conditions
-                        </DialogTitle>
+                        <DialogTitle>Venue Partner Terms & Conditions</DialogTitle>
                     </DialogHeader>
                     <div className="prose prose-sm text-sm text-muted-foreground space-y-4">
-                        <p>
-                            These terms and conditions govern your use of the
-                            platform as a venue partner. By submitting your
-                            venue for review, you agree to the following:
-                        </p>
-                        <p>
-                            <strong>1. Venue Listing.</strong> You warrant that
-                            all information provided during onboarding is
-                            accurate and up-to-date. You agree to maintain
-                            accurate details for your venue including pricing,
-                            availability, and contact information.
-                        </p>
-                        <p>
-                            <strong>2. Commission.</strong> The platform charges
-                            a commission on each completed booking. The rate
-                            will be communicated to you separately and may be
-                            updated with prior notice.
-                        </p>
-                        <p>
-                            <strong>3. Payouts.</strong> Payouts are processed
-                            according to your selected schedule, subject to a
-                            minimum payout threshold and applicable verification
-                            checks.
-                        </p>
-                        <p>
-                            <strong>4. Cancellation.</strong> You must honour
-                            the cancellation policy selected during onboarding.
-                            The platform will handle refund processing in
-                            accordance with your policy.
-                        </p>
-                        <p>
-                            <strong>5. Data Protection.</strong> Both parties
-                            agree to handle player and venue data in accordance
-                            with applicable data protection regulations.
-                        </p>
-                        <p>
-                            <strong>6. Termination.</strong> Either party may
-                            terminate this agreement with 30 days written
-                            notice. Outstanding payouts will be settled within
-                            14 days of termination.
-                        </p>
+                        <p>These terms and conditions govern your use of the platform as a venue partner. By submitting your venue for review, you agree to the following:</p>
+                        <p><strong>1. Venue Listing.</strong> You warrant that all information provided during onboarding is accurate and up-to-date.</p>
+                        <p><strong>2. Commission.</strong> The platform charges a commission on each completed booking.</p>
+                        <p><strong>3. Payouts.</strong> Payouts are processed according to your selected schedule.</p>
+                        <p><strong>4. Cancellation.</strong> You must honour the cancellation policy selected during onboarding.</p>
+                        <p><strong>5. Data Protection.</strong> Both parties agree to handle player and venue data in accordance with applicable data protection regulations.</p>
+                        <p><strong>6. Termination.</strong> Either party may terminate this agreement with 30 days written notice.</p>
                     </div>
                 </DialogContent>
             </Dialog>

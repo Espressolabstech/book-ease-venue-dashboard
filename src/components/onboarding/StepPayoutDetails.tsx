@@ -44,31 +44,19 @@ const StepPayoutDetails = ({
 
     const autoSave = useCallback(async () => {
         onSaving(true);
-        const row = {
-            venue_id: venueId,
-            bank_name: bankName || null,
-            account_holder_name: holderName || null,
-            iban: iban || null,
-            payout_schedule: schedule,
-        };
-
-        // const { data: existing } = await supabase
-        //     .from('venue_payout_details')
-        //     .select('id')
-        //     .eq('venue_id', venueId)
-        //     .maybeSingle();
-
-        // if (existing) {
-        //     await supabase
-        //         .from('venue_payout_details')
-        //         .update(row)
-        //         .eq('venue_id', venueId);
-        // } else {
-        //     await supabase.from('venue_payout_details').insert(row);
-        // }
+        sessionStorage.setItem(
+            'onboarding_step7',
+            JSON.stringify({
+                bankName,
+                holderName,
+                accountNumber,
+                ifscCode: iban,
+                schedule,
+            }),
+        );
         onSaving(false);
         onSaved();
-    }, [venueId, bankName, holderName, iban, schedule, onSaving, onSaved]);
+    }, [venueId, bankName, holderName, accountNumber, iban, schedule, onSaving, onSaved]); // eslint-disable-line
 
     const clearError = (field: string) =>
         setErrors((prev) => {

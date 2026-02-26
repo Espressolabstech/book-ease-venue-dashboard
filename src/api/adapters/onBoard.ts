@@ -9,20 +9,37 @@ export const isOnBoarded = async (): Promise<IsOnBoardedResponse> => {
     return apiClient({ url: endpoints.isOnBoarded, method: 'GET' });
 };
 
-export const venueImagesUpload = async (formData: FormData) => {
+export const getVenueImageUploadUrls = async (
+    data: VenueImageUploadUrlRequest,
+): Promise<VenueImageUploadUrlResponse> => {
     return apiClient({
         url: endpoints.venueImagesUpload,
         method: 'POST',
-        data: formData,
+        data,
     });
 };
 
-export const courtImagesUpload = async (formData: FormData) => {
+export const getCourtImageUploadUrls = async (
+    data: CourtImageUploadUrlRequest,
+): Promise<VenueImageUploadUrlResponse> => {
     return apiClient({
         url: endpoints.courtImagesUpload,
         method: 'POST',
-        data: formData,
+        data,
     });
+};
+
+export const uploadToPresignedUrl = async (
+    uploadUrl: string,
+    file: Blob | File,
+    mimetype: string,
+): Promise<void> => {
+    const res = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': mimetype },
+    });
+    if (!res.ok) throw new Error('Failed to upload image');
 };
 
 export const venueOnboard = async (data: VenueOnboardRequestData) => {

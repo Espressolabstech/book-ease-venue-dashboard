@@ -11,7 +11,7 @@ import { Button } from '../components/ui/button';
 
 const OnBoardingLayout = ({
     venueId,
-    venue,
+    token,
     progress,
     currentStep,
     saving = false,
@@ -27,7 +27,7 @@ const OnBoardingLayout = ({
 
     const goToStep = (step: number) => {
         if (step <= completedStep + 1 && step !== currentStep) {
-            navigate(`/onboarding/${venueId}/step/${step}`);
+            navigate(`/onboarding/${venueId}/${token}/step/${step}`);
         }
     };
 
@@ -47,7 +47,7 @@ const OnBoardingLayout = ({
                         </div>
                         <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
-                                {venue?.name || 'Loading...'}
+                                {'Book Ease'}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 {completedCount} of 8 steps complete

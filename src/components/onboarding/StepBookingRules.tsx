@@ -46,28 +46,16 @@ const StepBookingRules = ({
 
     const autoSave = useCallback(async () => {
         onSaving(true);
-        const row = {
-            venue_id: venueId,
-            advance_booking_days: advanceDays,
-            min_notice_hours: minNotice,
-            cancellation_policy: cancellationPolicy,
-            auto_confirm: autoConfirm,
-        };
-
-        // const { data: existing } = await supabase
-        //     .from('venue_booking_rules')
-        //     .select('id')
-        //     .eq('venue_id', venueId)
-        //     .maybeSingle();
-
-        // if (existing) {
-        //     await supabase
-        //         .from('venue_booking_rules')
-        //         .update(row)
-        //         .eq('venue_id', venueId);
-        // } else {
-        //     await supabase.from('venue_booking_rules').insert(row);
-        // }
+        sessionStorage.setItem(
+            'onboarding_step6',
+            JSON.stringify({
+                advanceDays,
+                minNotice,
+                cancellationPolicy,
+                autoConfirm,
+                maxBookings: maxBookings || null,
+            }),
+        );
         onSaving(false);
         onSaved();
     }, [

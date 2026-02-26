@@ -7,7 +7,11 @@ import { Textarea } from '../ui/textarea';
 import { Loader2, Upload, X, MapPin, Images } from 'lucide-react';
 import ImageCropDialog from './ImageCropDialog';
 import { toast } from 'sonner';
-import { getOnBoardedVenueDetails } from '../../api/adapters/onBoard';
+import {
+    getVenueImageUploadUrls,
+    uploadToPresignedUrl,
+    getOnBoardedVenueDetails,
+} from '../../api/adapters/onBoard';
 
 const MapLocationPicker = ({
     latitude,
@@ -202,14 +206,13 @@ const GalleryUpload = ({
 
 const StepVenueProfile = ({
     venueId,
-    venue,
-    onNext,
+    // onNext,
     onSaving,
     onSaved,
     triggerSave,
     onSaveComplete,
     triggerExit,
-    onExitComplete,
+    // onExitComplete,
 }: StepVenueProfileProps) => {
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
@@ -242,49 +245,45 @@ const StepVenueProfile = ({
     const { data: venueDetails, isLoading: isLoadingDetails } = useQuery({
         queryKey: ['onboardedVenueDetails'],
         queryFn: getOnBoardedVenueDetails,
-        enabled: !venue,
+        retry: false,
     });
 
     useEffect(() => {
-        if (venue) {
-            setName(venue.name || '');
-            setAddress(venue.address || '');
-            setCity(venue.city || '');
-            setState(venue.state || '');
-            setCountry(venue.country || '');
-            setPincode(venue.pincode || '');
-            setDescription(venue.description || '');
-            setContactEmail(venue.contact_email || '');
-            setWhatsapp(venue.whatsapp_number || '');
-            setLogoUrl(venue.logo_url || '');
-            setCoverUrl(venue.cover_photo_url || '');
-            setGalleryUrls(venue.gallery_urls || []);
-            setLatitude(venue.latitude);
-            setLongitude(venue.longitude);
-            return;
-        }
-
-        const d = venueDetails?.data;
+        const d = venueDetails?.data?.venue;
         if (!d) return;
+        setName((prev) => prev || d.name || '');
+        setCity((prev) => prev || d.city || '');
+        setState((prev) => prev || d.state || '');
+        setCountry((prev) => prev || d.country || '');
+        setPincode((prev) => prev || d.pincode || '');
+        setContactEmail((prev) => prev || d.email || '');
+        setWhatsapp((prev) => prev || (d.phone?.replace(/^\+91/, '') ?? ''));
+    }, [venueDetails]);
 
-        setName(d.name || '');
-        setCity(d.city || '');
-        setState(d.state || '');
-        setCountry(d.country || '');
-        setPincode(d.pincode || '');
-        setContactEmail(d.email || '');
-        setWhatsapp(d.phone?.replace(/^\+91/, '') || '');
-    }, [venue, venueDetails]);
-
-    // ------------------------------------------------------------------
+    useEffect(() => {
+        const saved = sessionStorage.getItem('onboarding_step1');
+        if (!saved) return;
+        try {
+            const d = JSON.parse(saved);
+            setName(d.venueName || '');
+            setAddress(d.venueAddress || '');
+            setCity(d.city || '');
+            setState(d.state || '');
+            setCountry(d.country || '');
+            setPincode(d.pincode || '');
+            setDescription(d.description || '');
+            setContactEmail(d.venuemail || '');
+            setWhatsapp(d.venuePhone || '');
+            setLogoUrl(d.logoUrl || '');
+            setCoverUrl(d.coverUrl || '');
+            setGalleryUrls(d.galleryUrls || []);
+            setLatitude(d.latitude);
+            setLongitude(d.longitude);
+        } catch {}
+    }, []);
 
     const autoSave = useCallback(
-        async (field: string, value: any) => {
-            // onSaving(true);
-            // await supabase.from('venues').update({ [field]: value }).eq('id', venueId);
-            // onSaving(false);
-            // onSaved();
-        },
+        async (field: string, value: any) => {},
         [venueId, onSaving, onSaved],
     );
 
@@ -326,6 +325,25 @@ const StepVenueProfile = ({
                 return;
             }
             onSaving(true);
+            sessionStorage.setItem(
+                'onboarding_step1',
+                JSON.stringify({
+                    venueName: name,
+                    venueAddress: address,
+                    city,
+                    state,
+                    country,
+                    pincode,
+                    description,
+                    venuemail: contactEmail,
+                    venuePhone: whatsapp,
+                    latitude,
+                    longitude,
+                    logoUrl,
+                    coverUrl,
+                    galleryUrls,
+                }),
+            );
             onSaving(false);
             onSaved();
             onSaveComplete(true);
@@ -366,10 +384,25 @@ const StepVenueProfile = ({
         const setUploading = isLogo ? setLogoUploading : setCoverUploading;
 
         setUploading(true);
-        // TODO: call venueImagesUpload(formData) and set the returned publicUrl
-        setUploading(false);
-        if (isLogo) setErrors((e) => ({ ...e, logo: '' }));
-        else setErrors((e) => ({ ...e, cover: '' }));
+        try {
+            const res = await getVenueImageUploadUrls({
+                venueId,
+                images: [{ type: isLogo ? 'LOGO' : 'COVER', mimetype: 'image/jpeg' }],
+            });
+            const { uploadUrl, publicUrl } = res.data[0];
+            await uploadToPresignedUrl(uploadUrl, blob, 'image/jpeg');
+            if (isLogo) {
+                setLogoUrl(publicUrl);
+                setErrors((e) => ({ ...e, logo: '' }));
+            } else {
+                setCoverUrl(publicUrl);
+                setErrors((e) => ({ ...e, cover: '' }));
+            }
+        } catch (err: any) {
+            toast.error(err?.message || 'Image upload failed');
+        } finally {
+            setUploading(false);
+        }
     };
 
     const handleGallerySelect = async (
@@ -379,24 +412,24 @@ const StepVenueProfile = ({
         if (!files.length) return;
         const toProcess = files.slice(0, 10 - galleryUrls.length);
 
+        setGalleryUploading(true);
         for (const file of toProcess) {
             if (file.size > 5 * 1024 * 1024) {
                 toast.error(`"${file.name}" exceeds 5MB limit.`);
                 continue;
             }
-            setGalleryUploading(true);
-            const reader = new FileReader();
-            reader.onload = () => {
-                const dataUrl = reader.result as string;
-                setGalleryUrls((prev) => {
-                    const updated = [...prev, dataUrl];
-                    autoSave('gallery_urls', updated);
-                    return updated;
+            try {
+                const res = await getVenueImageUploadUrls({
+                    venueId,
+                    images: [{ type: 'GALLERY', mimetype: file.type || 'image/jpeg' }],
                 });
-            };
-            reader.readAsDataURL(file);
+                const { uploadUrl, publicUrl } = res.data[0];
+                await uploadToPresignedUrl(uploadUrl, file, file.type || 'image/jpeg');
+                setGalleryUrls((prev) => [...prev, publicUrl]);
+            } catch (err: any) {
+                toast.error(`Failed to upload "${file.name}"`);
+            }
         }
-
         setGalleryUploading(false);
         e.target.value = '';
     };

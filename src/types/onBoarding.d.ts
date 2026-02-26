@@ -3,6 +3,7 @@ import type { DaySchedule } from '../components/onboarding/ScheduleBuilder';
 declare global {
     interface OnboardingShellProps {
         venueId: string;
+        token: string;
         venue: any;
         progress: any;
         currentStep: number;
@@ -148,6 +149,44 @@ declare global {
         expires_at: string;
     }
 
+    interface PresignedUploadResult {
+        uploadUrl: string;
+        key: string;
+        publicUrl: string;
+        type: 'LOGO' | 'COVER' | 'GALLERY' | 'PHOTO';
+        order: number;
+    }
+
+    interface VenueImageUploadUrlRequest {
+        venueId: string;
+        images: {
+            type: 'LOGO' | 'COVER' | 'GALLERY';
+            mimetype: string;
+            order?: number;
+        }[];
+    }
+
+    interface CourtImageUploadUrlRequest {
+        venueId: string;
+        images: {
+            type: string;
+            mimetype: string;
+        }[];
+    }
+
+    interface VenueImageUploadUrlResponse {
+        message: string;
+        data: PresignedUploadResult[];
+    }
+
+    // kept for backward compat, prefer VenueImageUploadUrlResponse
+    interface ImageUploadResponse {
+        message: string;
+        data: {
+            publicUrl: string;
+        };
+    }
+
     interface IsOnBoardedResponse {
         message: string;
         data: {
@@ -213,7 +252,7 @@ declare global {
         advanceBookingDays?: number;
         minimumNoticeMinutes?: number;
         cancellationPolicy?: string;
-        maxBookingPerPlayerDay?: number | null;
+        maxBookingPerPlayerDay?: number;
         bankName: string;
         accountNumber: string;
         ifscCode: string;
@@ -223,14 +262,17 @@ declare global {
 
     interface GetOnBoardedVenueDetailsResponse {
         message: string;
+        success: boolean;
         data: {
-            name: string;
-            email: string;
-            phone: string;
-            city: string;
-            state: string;
-            country: string;
-            pincode: string;
+            venue: {
+                name: string;
+                email: string;
+                phone: string;
+                city: string;
+                state: string;
+                country: string;
+                pincode: string;
+            };
         };
     }
 }

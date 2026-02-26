@@ -31,141 +31,90 @@ const StepPricing = ({
     const timeOptions = generateTimeOptions();
 
     useEffect(() => {
-        (async () => {
-            // const { data: courtsData } = await supabase
-            //     .from('venue_courts')
-            //     .select('id, name, sport')
-            //     .eq('venue_id', venueId)
-            //     .order('created_at');
+        try {
+            const savedCourts = sessionStorage.getItem('onboarding_step3');
+            if (!savedCourts) { setLoaded(true); return; }
 
-            // if (!courtsData || courtsData.length === 0) {
-            //     setCourts([]);
-            //     setLoaded(true);
-            //     return;
-            // }
+            const loadedCourts: Court[] = JSON.parse(savedCourts);
+            setCourts(loadedCourts);
 
-            // setCourts(courtsData);
-
-            // const { data: pricingData } = await supabase
-            //     .from('court_pricing')
-            //     .select('*')
-            //     .in(
-            //         'court_id',
-            //         courtsData.map((c) => c.id),
-            //     );
+            const savedPricing = sessionStorage.getItem('onboarding_step5');
+            const existingMap: Record<string, CourtPricing> = savedPricing
+                ? JSON.parse(savedPricing)
+                : {};
 
             const map: Record<string, CourtPricing> = {};
-            // for (const court of courtsData) {
-            //     const existing = pricingData?.find(
-            //         (p: any) => p.court_id === court.id,
-            //     );
-            //     map[court.id] = {
-            //         court_id: court.id,
-            //         base_rate: existing?.base_rate?.toString() || '',
-            //         booking_durations: existing?.booking_durations
-            //             ? (existing.booking_durations as number[])
-            //             : [60],
-            //         peak_enabled: existing?.peak_enabled || false,
-            //         peak_time_start: existing?.peak_time_start || '17:00',
-            //         peak_time_end: existing?.peak_time_end || '21:00',
-            //         peak_rate: existing?.peak_rate?.toString() || '',
-            //         weekend_rate_enabled:
-            //             existing?.weekend_rate_enabled || false,
-            //         weekend_days: ['Saturday', 'Sunday'],
-            //         weekend_rate: existing?.weekend_rate?.toString() || '',
-            //     };
-            // }
-            // setPricingMap(map);
-            // setLoaded(true);
-        })();
+            loadedCourts.forEach((_court, i) => {
+                const key = String(i);
+                map[key] = existingMap[key] ?? {
+                    court_id: key,
+                    base_rate: '',
+                    booking_durations: [60],
+                    peak_enabled: false,
+                    peak_time_start: '17:00',
+                    peak_time_end: '21:00',
+                    peak_rate: '',
+                    weekend_rate_enabled: false,
+                    weekend_days: ['Saturday', 'Sunday'],
+                    weekend_rate: '',
+                };
+            });
+            setPricingMap(map);
+        } catch {}
+        setLoaded(true);
     }, [venueId]);
 
     const currentCourt = courts[activeTab];
-    const pricing = currentCourt ? pricingMap['currentCourt.id'] : null;
+    const currentKey = String(activeTab);
+    const pricing = currentCourt ? pricingMap[currentKey] : null;
 
     const updatePricing = useCallback(
-        (courtId: string, updates: Partial<CourtPricing>) => {
+        (key: string, updates: Partial<CourtPricing>) => {
             setPricingMap((prev) => ({
                 ...prev,
-                [courtId]: { ...prev[courtId], ...updates },
+                [key]: { ...prev[key], ...updates },
             }));
         },
         [],
     );
 
     const autoSaveCourt = useCallback(
-        async (courtId: string) => {
-            const p = pricingMap[courtId];
-            if (!p) return;
+        async (_key: string) => {
             onSaving(true);
-
-            const row = {
-                court_id: courtId,
-                base_rate: parseFloat(p.base_rate) || 0,
-                booking_durations: p.booking_durations,
-                peak_enabled: p.peak_enabled,
-                peak_time_start: p.peak_enabled ? p.peak_time_start : null,
-                peak_time_end: p.peak_enabled ? p.peak_time_end : null,
-                peak_rate: p.peak_enabled
-                    ? parseFloat(p.peak_rate) || null
-                    : null,
-                weekend_rate_enabled: p.weekend_rate_enabled,
-                weekend_rate: p.weekend_rate_enabled
-                    ? parseFloat(p.weekend_rate) || null
-                    : null,
-            };
-
-            // const { data: existing } = await supabase
-            //     .from('court_pricing')
-            //     .select('id')
-            //     .eq('court_id', courtId)
-            //     .maybeSingle();
-
-            // if (existing) {
-            //     await supabase
-            //         .from('court_pricing')
-            //         .update(row)
-            //         .eq('court_id', courtId);
-            // } else {
-            //     await supabase.from('court_pricing').insert(row);
-            // }
-
             onSaving(false);
             onSaved();
         },
-        [pricingMap, onSaving, onSaved],
+        [onSaving, onSaved],
     );
 
-    const switchTab = async (newIndex: number) => {
-        if (currentCourt) await autoSaveCourt('');
+    const switchTab = (newIndex: number) => {
         setActiveTab(newIndex);
         setErrors({});
     };
 
     const validateAll = () => {
         const errs: Record<string, string> = {};
-        for (const court of courts) {
-            const p = pricingMap['court.id'];
-            if (!p) continue;
+        courts.forEach((court, i) => {
+            const key = String(i);
+            const p = pricingMap[key];
+            if (!p) return;
             const prefix = court.name;
             if (!p.base_rate || parseFloat(p.base_rate) <= 0)
-                errs[`${court.id}_base`] = `${prefix}: Base rate is required`;
+                errs[`${key}_base`] = `${prefix}: Base rate is required`;
             if (p.booking_durations.length === 0)
-                errs[`${court.id}_dur`] =
-                    `${prefix}: Select at least one duration`;
+                errs[`${key}_dur`] = `${prefix}: Select at least one duration`;
             if (p.peak_enabled) {
                 if (!p.peak_rate)
-                    errs[`${court.id}_peak`] = `${prefix}: Peak rate required`;
+                    errs[`${key}_peak`] = `${prefix}: Peak rate required`;
                 else if (
                     parseFloat(p.peak_rate) <= parseFloat(p.base_rate || '0')
                 )
-                    errs[`${court.id}_peak`] =
+                    errs[`${key}_peak`] =
                         `${prefix}: Peak rate should be higher than base rate`;
             }
             if (p.weekend_rate_enabled && !p.weekend_rate)
-                errs[`${court.id}_weekend`] =
-                    `${prefix}: Weekend rate required`;
-        }
+                errs[`${key}_weekend`] = `${prefix}: Weekend rate required`;
+        });
         setErrors(errs);
         return Object.keys(errs).length === 0;
     };
@@ -184,13 +133,10 @@ const StepPricing = ({
                 onSaveComplete(false);
                 return;
             }
-            for (const court of courts) {
-                await autoSaveCourt('court.id');
-            }
-            // await supabase
-            //     .from('onboarding_progress')
-            //     .update({ current_step: 5 })
-            //     .eq('venue_id', venueId);
+            sessionStorage.setItem(
+                'onboarding_step5',
+                JSON.stringify(pricingMap),
+            );
             onSaveComplete(true);
         })();
     }, [triggerSave]); // eslint-disable-line
@@ -198,12 +144,8 @@ const StepPricing = ({
     // Save & Exit
     useEffect(() => {
         if (!triggerExit) return;
-        (async () => {
-            for (const court of courts) {
-                await autoSaveCourt('court.id');
-            }
-            onExitComplete();
-        })();
+        sessionStorage.setItem('onboarding_step5', JSON.stringify(pricingMap));
+        onExitComplete();
     }, [triggerExit]); // eslint-disable-line
 
     if (!loaded) return null;
@@ -235,25 +177,24 @@ const StepPricing = ({
         );
     }
 
-    const toggleDuration = (courtId: string, dur: number) => {
-        const p = pricingMap[courtId];
+    const toggleDuration = (key: string, dur: number) => {
+        const p = pricingMap[key];
         const current = p.booking_durations;
         if (current.includes(dur)) {
             if (current.length <= 1) {
                 toast.error('At least one duration must be selected.');
                 return;
             }
-            updatePricing(courtId, {
+            updatePricing(key, {
                 booking_durations: current.filter((d) => d !== dur),
             });
         } else {
-            updatePricing(courtId, {
+            updatePricing(key, {
                 booking_durations: [...current, dur].sort((a, b) => a - b),
             });
         }
     };
 
-    // Visual timeline
     const renderTimeline = (p: CourtPricing) => {
         if (!p.peak_enabled) return null;
         const startHour = 6;
@@ -314,7 +255,7 @@ const StepPricing = ({
                 <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
                     {courts.map((court, i) => (
                         <button
-                            key={court.id}
+                            key={i}
                             onClick={() => switchTab(i)}
                             className={cn(
                                 'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
@@ -355,14 +296,14 @@ const StepPricing = ({
                                 placeholder="0.00"
                                 value={pricing.base_rate}
                                 onChange={(e) =>
-                                    updatePricing('currentCourt.id', {
+                                    updatePricing(currentKey, {
                                         base_rate: e.target.value,
                                     })
                                 }
-                                onBlur={() => autoSaveCourt('currentCourt.id')}
+                                onBlur={() => autoSaveCourt(currentKey)}
                                 className={cn(
                                     'pl-7',
-                                    errors[`${currentCourt.id}_base`] &&
+                                    errors[`${currentKey}_base`] &&
                                         'border-destructive',
                                 )}
                             />
@@ -370,9 +311,9 @@ const StepPricing = ({
                         <p className="text-xs text-muted-foreground">
                             Price per hour during standard hours.
                         </p>
-                        {errors[`${currentCourt.id}_base`] && (
+                        {errors[`${currentKey}_base`] && (
                             <p className="text-xs text-destructive">
-                                {errors[`${currentCourt.id}_base`]}
+                                {errors[`${currentKey}_base`]}
                             </p>
                         )}
                     </div>
@@ -388,15 +329,10 @@ const StepPricing = ({
                                     <button
                                         key={d.value}
                                         onClick={() => {
-                                            toggleDuration(
-                                                'currentCourt.id',
-                                                d.value,
-                                            );
+                                            toggleDuration(currentKey, d.value);
                                             setTimeout(
                                                 () =>
-                                                    autoSaveCourt(
-                                                        'currentCourt.id',
-                                                    ),
+                                                    autoSaveCourt(currentKey),
                                                 100,
                                             );
                                         }}
@@ -412,9 +348,9 @@ const StepPricing = ({
                                 );
                             })}
                         </div>
-                        {errors[`${currentCourt.id}_dur`] && (
+                        {errors[`${currentKey}_dur`] && (
                             <p className="text-xs text-destructive">
-                                {errors[`${currentCourt.id}_dur`]}
+                                {errors[`${currentKey}_dur`]}
                             </p>
                         )}
                     </div>
@@ -433,11 +369,11 @@ const StepPricing = ({
                             <Switch
                                 checked={pricing.peak_enabled}
                                 onCheckedChange={(v) => {
-                                    updatePricing('currentCourt.id', {
+                                    updatePricing(currentKey, {
                                         peak_enabled: v,
                                     });
                                     setTimeout(
-                                        () => autoSaveCourt('currentCourt.id'),
+                                        () => autoSaveCourt(currentKey),
                                         100,
                                     );
                                 }}
@@ -452,17 +388,14 @@ const StepPricing = ({
                                         <select
                                             value={pricing.peak_time_start}
                                             onChange={(e) => {
-                                                updatePricing(
-                                                    'currentCourt.id',
-                                                    {
-                                                        peak_time_start:
-                                                            e.target.value,
-                                                    },
-                                                );
+                                                updatePricing(currentKey, {
+                                                    peak_time_start:
+                                                        e.target.value,
+                                                });
                                                 setTimeout(
                                                     () =>
                                                         autoSaveCourt(
-                                                            'currentCourt.id',
+                                                            currentKey,
                                                         ),
                                                     100,
                                                 );
@@ -484,17 +417,14 @@ const StepPricing = ({
                                         <select
                                             value={pricing.peak_time_end}
                                             onChange={(e) => {
-                                                updatePricing(
-                                                    'currentCourt.id',
-                                                    {
-                                                        peak_time_end:
-                                                            e.target.value,
-                                                    },
-                                                );
+                                                updatePricing(currentKey, {
+                                                    peak_time_end:
+                                                        e.target.value,
+                                                });
                                                 setTimeout(
                                                     () =>
                                                         autoSaveCourt(
-                                                            'currentCourt.id',
+                                                            currentKey,
                                                         ),
                                                     100,
                                                 );
@@ -530,28 +460,23 @@ const StepPricing = ({
                                             placeholder="0.00"
                                             value={pricing.peak_rate}
                                             onChange={(e) =>
-                                                updatePricing(
-                                                    'currentCourt.id',
-                                                    {
-                                                        peak_rate:
-                                                            e.target.value,
-                                                    },
-                                                )
+                                                updatePricing(currentKey, {
+                                                    peak_rate: e.target.value,
+                                                })
                                             }
                                             onBlur={() =>
-                                                autoSaveCourt('currentCourt.id')
+                                                autoSaveCourt(currentKey)
                                             }
                                             className={cn(
                                                 'pl-7',
-                                                errors[
-                                                    `${currentCourt.id}_peak`
-                                                ] && 'border-destructive',
+                                                errors[`${currentKey}_peak`] &&
+                                                    'border-destructive',
                                             )}
                                         />
                                     </div>
-                                    {errors[`${currentCourt.id}_peak`] && (
+                                    {errors[`${currentKey}_peak`] && (
                                         <p className="text-xs text-destructive">
-                                            {errors[`${currentCourt.id}_peak`]}
+                                            {errors[`${currentKey}_peak`]}
                                         </p>
                                     )}
                                 </div>
@@ -575,11 +500,11 @@ const StepPricing = ({
                             <Switch
                                 checked={pricing.weekend_rate_enabled}
                                 onCheckedChange={(v) => {
-                                    updatePricing('currentCourt.id', {
+                                    updatePricing(currentKey, {
                                         weekend_rate_enabled: v,
                                     });
                                     setTimeout(
-                                        () => autoSaveCourt('currentCourt.id'),
+                                        () => autoSaveCourt(currentKey),
                                         100,
                                     );
                                 }}
@@ -618,7 +543,7 @@ const StepPricing = ({
                                                             return;
                                                         }
                                                         updatePricing(
-                                                            'currentCourt.id',
+                                                            currentKey,
                                                             {
                                                                 weekend_days:
                                                                     next,
@@ -627,7 +552,7 @@ const StepPricing = ({
                                                         setTimeout(
                                                             () =>
                                                                 autoSaveCourt(
-                                                                    'currentCourt.id',
+                                                                    currentKey,
                                                                 ),
                                                             100,
                                                         );
@@ -659,21 +584,17 @@ const StepPricing = ({
                                             placeholder="0.00"
                                             value={pricing.weekend_rate}
                                             onChange={(e) =>
-                                                updatePricing(
-                                                    'currentCourt.id',
-                                                    {
-                                                        weekend_rate:
-                                                            e.target.value,
-                                                    },
-                                                )
+                                                updatePricing(currentKey, {
+                                                    weekend_rate: e.target.value,
+                                                })
                                             }
                                             onBlur={() =>
-                                                autoSaveCourt('currentCourt.id')
+                                                autoSaveCourt(currentKey)
                                             }
                                             className={cn(
                                                 'pl-7',
                                                 errors[
-                                                    `${currentCourt.id}_weekend`
+                                                    `${currentKey}_weekend`
                                                 ] && 'border-destructive',
                                             )}
                                         />
@@ -682,13 +603,9 @@ const StepPricing = ({
                                         This rate applies instead of the base
                                         rate on selected weekend days.
                                     </p>
-                                    {errors[`${currentCourt.id}_weekend`] && (
+                                    {errors[`${currentKey}_weekend`] && (
                                         <p className="text-xs text-destructive">
-                                            {
-                                                errors[
-                                                    `${currentCourt.id}_weekend`
-                                                ]
-                                            }
+                                            {errors[`${currentKey}_weekend`]}
                                         </p>
                                     )}
                                 </div>
