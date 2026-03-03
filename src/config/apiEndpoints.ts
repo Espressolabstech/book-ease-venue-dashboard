@@ -11,4 +11,50 @@ export const endpoints = {
     venueOnboard: '/onboard/venue',
     isOnBoarded: '/onboard/venue/is-onboarded',
     getOnBoardedVenueDetails: '/onboard/venue/details',
+
+    // courts Endpoints
+    getCourts: '/courts/list',
+    createCourt: '/courts/create',
+    updateCourt: (courtId: string) => `/courts/${courtId}/update`,
+    deleteCourt: (courtId: string) => `/courts/${courtId}/delete`,
+    viewCourt: (courtId: string) => `/courts/${courtId}/view`,
+
+    // amenities Endpoints
+    listAmenities: '/amenities/list',
+    updateAmenities: (id: string) => `/amenities/${id}/update`,
+    deleteAmenities: (id: string) => `/amenities/${id}/delete`,
+
+    // bankdetials Endpoints
+    listBankDetails: '/bank-details/list',
+    updateBankDetails: (id: string) => `/bank-details/${id}/update`,
+    deleteBankDetails: (id: string) => `/bank-details/${id}/delete`,
+
+    // booking policy Endpoints
+    listBookingPolicy: '/booking-policy/list',
+    updateBookingPolicy: '/booking-policy/update',
+
+    // Court pricing Endpoints
+    listCourtPricing: '/court-pricing/list',
+    updateCourtPricing: (id: string) => `/court-pricing/${id}/update`,
+    deleteCourtPricing: (id: string) => `/court-pricing/${id}/delete`,
+
+    // Peak hour pricing Endpoints
+    listPeakHourPricing: '/peak-hour-pricing/list',
+    updatePeakHourPricing: (id: string) => `/peak-hour-pricing/${id}/update`,
+    deletePeakHourPricing: (id: string) => `/peak-hour-pricing/${id}/delete`,
+
+    // time slots Endpoints
+    listTimeSlots: '/time-slots/list',
+    updateTimeSlot: (id: string) => `/time-slots/${id}/update`,
+    deleteTimeSlot: (id: string) => `/time-slots/${id}/delete`,
+
+    // Venue hours endpoints
+    listVenueHours: '/venue-hours/list',
+    updateVenueHours: (id: string) => `/venue-hours/${id}/update`,
+    deleteVenueHours: (id: string) => `/venue-hours/${id}/delete`,
+
+    // Venue Images endpoints
+    listVenueImages: '/venue-images/list',
+    updateVenueImage: (id: string) => `/venue-images/${id}/update`,
+    deleteVenueImage: (id: string) => `/venue-images/${id}/delete`,
 };
