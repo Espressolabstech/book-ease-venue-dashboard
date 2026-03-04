@@ -17,7 +17,7 @@ export const updateTimeSlot = async (
 ): Promise<UpdateTimeSlotResponse> => {
     return apiClient({
         url: endpoints.updateTimeSlot(id),
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

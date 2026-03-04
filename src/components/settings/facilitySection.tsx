@@ -1,18 +1,21 @@
-import { Check, Save } from 'lucide-react';
+import { Check, Loader2, Save } from 'lucide-react';
 import { allAmenities } from '../../utils/settings';
 import { Card, CardContent } from '../ui/card';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
-import { toast } from 'sonner';
 
 const FacilitySection = ({
     facility,
     onBioChange,
     onToggleAmenity,
+    onSave,
+    saving,
 }: {
     facility: FacilityInfo;
     onBioChange: (bio: string) => void;
     onToggleAmenity: (a: string) => void;
+    onSave: () => void;
+    saving?: boolean;
 }) => {
     return (
         <div className="space-y-4">
@@ -68,11 +71,13 @@ const FacilitySection = ({
                 </CardContent>
             </Card>
 
-            <Button
-                className="w-full"
-                onClick={() => toast.success('Facility info saved')}
-            >
-                <Save className="mr-1.5 h-4 w-4" /> Save Changes
+            <Button className="w-full" onClick={onSave} disabled={saving}>
+                {saving ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                    <Save className="mr-1.5 h-4 w-4" />
+                )}
+                Save Changes
             </Button>
         </div>
     );

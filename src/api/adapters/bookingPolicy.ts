@@ -13,7 +13,7 @@ export const updateBookingPolicy = async (
 ): Promise<UpdateBookingPolicyResponse> => {
     return apiClient({
         url: endpoints.updateBookingPolicy,
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

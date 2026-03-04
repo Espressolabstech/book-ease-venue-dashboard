@@ -14,7 +14,7 @@ export const updateBankDetails = async (
 ): Promise<UpdateBankDetailsResponse> => {
     return apiClient({
         url: endpoints.updateBankDetails(id),
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

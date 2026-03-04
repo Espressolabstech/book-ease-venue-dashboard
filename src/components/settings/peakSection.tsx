@@ -1,9 +1,8 @@
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { toast } from 'sonner';
 import { weekdays } from '../../utils/settings';
 
 const PeakSection = ({
@@ -13,6 +12,8 @@ const PeakSection = ({
     removeSlot,
     toggleDay,
     updatePrice,
+    onSave,
+    saving,
 }: {
     peakConfigs: SportPeakConfig[];
     addSlot: (sport: string) => void;
@@ -28,6 +29,8 @@ const PeakSection = ({
         field: 'peakPrice' | 'offPeakPrice',
         value: number,
     ) => void;
+    onSave: () => void;
+    saving?: boolean;
 }) => {
     return (
         <div className="space-y-4">
@@ -185,11 +188,13 @@ const PeakSection = ({
                 </Card>
             ))}
 
-            <Button
-                className="w-full"
-                onClick={() => toast.success('Peak hours & pricing saved')}
-            >
-                <Save className="mr-1.5 h-4 w-4" /> Save Changes
+            <Button className="w-full" onClick={onSave} disabled={saving}>
+                {saving ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                    <Save className="mr-1.5 h-4 w-4" />
+                )}
+                Save Changes
             </Button>
         </div>
     );

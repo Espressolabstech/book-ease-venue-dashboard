@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import HubView from '../../components/settings/hubView';
@@ -19,145 +19,108 @@ import {
     AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
 import { path } from '../../navigation/commanPaths';
+import {
+    getCourts,
+    createCourt,
+    updateCourt,
+    deleteCourt as deleteCourtApi,
+} from '../../api/adapters/courts';
+import {
+    listVenueHours,
+    updateVenueHours,
+} from '../../api/adapters/venueHours';
+import {
+    listPeakHourPricings,
+    updatePeakHourPricing,
+    deletePeakHourPricing,
+} from '../../api/adapters/peakHourPricing';
+import {
+    listAmenities,
+    updateAmenity,
+    deleteAmenity,
+} from '../../api/adapters/amenities';
+import {
+    getBookingPolicy,
+    updateBookingPolicy,
+} from '../../api/adapters/bookingPolicy';
 
-const initialCourts: CourtData[] = [
-    {
-        id: 'c1',
-        name: 'Court 1',
-        sport: 'Padel',
-        surfaceMaterial: 'Artificial Turf',
-        lighting: 'LED Floodlights',
-        roofed: false,
-        isActive: true,
-    },
-    {
-        id: 'c2',
-        name: 'Court 2',
-        sport: 'Padel',
-        surfaceMaterial: 'Panoramic Glass',
-        lighting: 'LED Floodlights',
-        roofed: true,
-        isActive: true,
-    },
-    {
-        id: 'c3',
-        name: 'Court 3',
-        sport: 'Padel',
-        surfaceMaterial: 'Synthetic Grass',
-        lighting: 'Indoor Lighting',
-        roofed: true,
-        isActive: true,
-    },
-    {
-        id: 'c4',
-        name: 'Court A',
-        sport: 'Pickleball',
-        surfaceMaterial: 'Cushioned Acrylic',
-        lighting: 'LED Floodlights',
-        roofed: false,
-        isActive: true,
-    },
-    {
-        id: 'c5',
-        name: 'Court B',
-        sport: 'Pickleball',
-        surfaceMaterial: 'Hard Court',
-        lighting: 'Indoor Lighting',
-        roofed: true,
-        isActive: true,
-    },
+// ── Day index helpers ─────────────────────────────────────────────────────────
+const DAY_NAMES = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
 ];
+const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const defaultHours: OperatingHours[] = [
-    { day: 'Monday', isOpen: true, openTime: '07:00', closeTime: '22:00' },
-    { day: 'Tuesday', isOpen: true, openTime: '07:00', closeTime: '22:00' },
-    { day: 'Wednesday', isOpen: true, openTime: '07:00', closeTime: '22:00' },
-    { day: 'Thursday', isOpen: true, openTime: '07:00', closeTime: '22:00' },
-    { day: 'Friday', isOpen: true, openTime: '08:00', closeTime: '23:00' },
-    { day: 'Saturday', isOpen: true, openTime: '08:00', closeTime: '23:00' },
-    { day: 'Sunday', isOpen: true, openTime: '08:00', closeTime: '21:00' },
-];
+function venueHoursToOperatingHours(
+    apiHours: VenueHoursModel[],
+): OperatingHours[] {
+    return DAY_NAMES.map((day, i) => {
+        const entry = apiHours.find((h) => h.dayOfWeek === i);
+        return {
+            day,
+            isOpen: entry ? !entry.isClosed : true,
+            openTime: entry?.openTime ?? '08:00',
+            closeTime: entry?.closeTime ?? '22:00',
+            id: entry?.id,
+        };
+    });
+}
 
-const initialFacility: FacilityInfo = {
-    bio: 'A premium sports facility offering world-class Padel and Pickleball courts in the heart of the city.',
-    amenities: [
-        'Washrooms',
-        'Changing Rooms',
-        'Parking',
-        'Café / Lounge',
-        'WiFi',
-    ],
-};
+// ── Day index helpers (continued) ─────────────────────────────────────────────
 
-const initialDowntimes: ScheduledDowntime[] = [
-    {
-        id: 'd1',
-        courtId: 'c1',
-        startDate: '2026-02-15',
-        endDate: '2026-02-16',
-        reason: 'Turf replacement',
-    },
-    {
-        id: 'd2',
-        courtId: 'c4',
-        startDate: '2026-02-20',
-        endDate: '2026-02-20',
-        reason: 'Net maintenance',
-    },
-];
+function courtModelToCourtData(c: CourtModel): CourtData {
+    return {
+        id: c.id,
+        name: c.name,
+        sport: c.sport === 'PADEL' ? 'Padel' : 'Pickleball',
+        surfaceMaterial: c.surface,
+        lighting:
+            c.environment === 'INDOOR' ? 'Indoor Lighting' : 'LED Floodlights',
+        roofed: c.environment === 'INDOOR',
+        isActive: c.status === 'ACTIVE',
+    };
+}
 
-const initialPeakConfigs: SportPeakConfig[] = [
-    {
-        sport: 'Padel',
-        peakPrice: 200,
-        offPeakPrice: 150,
-        slots: [
-            {
-                id: 'p1',
-                startTime: '17:00',
-                endTime: '22:00',
-                days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-            },
-            {
-                id: 'p2',
-                startTime: '08:00',
-                endTime: '22:00',
-                days: ['Sat', 'Sun'],
-            },
-        ],
-    },
-    {
-        sport: 'Pickleball',
-        peakPrice: 160,
-        offPeakPrice: 100,
-        slots: [
-            {
-                id: 'p3',
-                startTime: '17:00',
-                endTime: '21:00',
-                days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-            },
-            {
-                id: 'p4',
-                startTime: '09:00',
-                endTime: '21:00',
-                days: ['Sat', 'Sun'],
-            },
-        ],
-    },
-];
+const defaultHours: OperatingHours[] = DAY_NAMES.map((day) => ({
+    day,
+    isOpen: true,
+    openTime: '08:00',
+    closeTime: '22:00',
+}));
 
 const Settings = () => {
     const navigate = useNavigate();
     const [section, setSection] = useState<Section>('hub');
     const [activeSport, setActiveSport] = useState('Padel');
-    const [courts, setCourts] = useState<CourtData[]>(initialCourts);
+
+    // ── API-backed state ──
+    const [courts, setCourts] = useState<CourtData[]>([]);
+    const [courtsRaw, setCourtsRaw] = useState<CourtModel[]>([]);
     const [hours, setHours] = useState<OperatingHours[]>(defaultHours);
-    const [downtimes, setDowntimes] =
-        useState<ScheduledDowntime[]>(initialDowntimes);
-    const [peakConfigs, setPeakConfigs] =
-        useState<SportPeakConfig[]>(initialPeakConfigs);
-    const [facility, setFacility] = useState<FacilityInfo>(initialFacility);
+    const [venueHoursRaw, setVenueHoursRaw] = useState<VenueHoursModel[]>([]);
+    const [peakConfigs, setPeakConfigs] = useState<SportPeakConfig[]>([]);
+    const [peakRaw, setPeakRaw] = useState<PeakHourPricingModel[]>([]);
+    const [amenities, setAmenities] = useState<AmenityModel[]>([]);
+    const [facility, setFacility] = useState<FacilityInfo>({
+        bio: '',
+        amenities: [],
+    });
+    const [bookingPolicy, setBookingPolicy] =
+        useState<BookingPolicyModel | null>(null);
+
+    // ── Loading / saving flags ──
+    const [loadingSection, setLoadingSection] = useState<Section | null>(null);
+    const [savingHours, setSavingHours] = useState(false);
+    const [savingPeak, setSavingPeak] = useState(false);
+    const [savingFacility, setSavingFacility] = useState(false);
+
+    // ── Local UI state ──
+    const [downtimes] = useState<ScheduledDowntime[]>([]);
     const [editingCourtId, setEditingCourtId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<CourtData | null>(null);
     const [deleteCourtId, setDeleteCourtId] = useState<string | null>(null);
@@ -178,6 +141,105 @@ const Settings = () => {
         isActive: true,
     });
 
+    // ── Data fetchers ────────────────────────────────────────────────────────────
+
+    const fetchCourts = useCallback(async () => {
+        setLoadingSection('courts');
+        try {
+            const res = await getCourts();
+            setCourtsRaw(res.data.courts);
+            setCourts(res.data.courts.map(courtModelToCourtData));
+        } catch {
+            toast.error('Failed to load courts');
+        } finally {
+            setLoadingSection(null);
+        }
+    }, []);
+
+    const fetchHours = useCallback(async () => {
+        setLoadingSection('hours');
+        try {
+            const res = await listVenueHours();
+            setVenueHoursRaw(res.data.venueHours);
+            setHours(venueHoursToOperatingHours(res.data.venueHours));
+        } catch {
+            toast.error('Failed to load operating hours');
+        } finally {
+            setLoadingSection(null);
+        }
+    }, []);
+
+    const fetchPeakHours = useCallback(async () => {
+        if (!courtsRaw.length) return;
+        setLoadingSection('peak');
+        try {
+            // Fetch peak hours for the first court (shared pricing model)
+            const firstCourtId = courtsRaw[0]?.id;
+            if (!firstCourtId) return;
+            const res = await listPeakHourPricings({ courtId: firstCourtId });
+            setPeakRaw(res.data.peakHourPricings);
+            const configs: SportPeakConfig[] = [];
+            const sports = ['Padel', 'Pickleball'];
+            for (const sport of sports) {
+                const courtPeaks = res.data.peakHourPricings;
+                configs.push({
+                    sport,
+                    peakPrice: courtPeaks[0]?.pricePerHour ?? 0,
+                    offPeakPrice: 0,
+                    slots: courtPeaks.map((p) => ({
+                        id: p.id,
+                        startTime: p.startTime,
+                        endTime: p.endTime,
+                        days:
+                            p.dayOfWeek !== null
+                                ? [SHORT_DAYS[p.dayOfWeek]]
+                                : [],
+                    })),
+                });
+            }
+            setPeakConfigs(configs);
+        } catch {
+            toast.error('Failed to load peak hours');
+        } finally {
+            setLoadingSection(null);
+        }
+    }, [courtsRaw]);
+
+    const fetchAmenities = useCallback(async () => {
+        try {
+            const res = await listAmenities();
+            setAmenities(res.data.amenities);
+            setFacility((prev) => ({
+                ...prev,
+                amenities: res.data.amenities.map((a: AmenityModel) => a.name),
+            }));
+        } catch {
+            toast.error('Failed to load amenities');
+        }
+    }, []);
+
+    const fetchBookingPolicy = useCallback(async () => {
+        try {
+            const res = await getBookingPolicy();
+            setBookingPolicy(res.data.bookingPolicy);
+        } catch {
+            // No booking policy yet — ignore
+        }
+    }, []);
+
+    // ── Initial load ─────────────────────────────────────────────────────────────
+
+    useEffect(() => {
+        fetchCourts();
+        fetchHours();
+        fetchAmenities();
+        fetchBookingPolicy();
+    }, [fetchCourts, fetchHours, fetchAmenities, fetchBookingPolicy]);
+
+    useEffect(() => {
+        if (courtsRaw.length) fetchPeakHours();
+    }, [courtsRaw, fetchPeakHours]);
+
     const sectionTitle: Record<Section, string> = {
         hub: 'Settings',
         hours: 'Operating Hours',
@@ -197,7 +259,7 @@ const Settings = () => {
         }
     };
 
-    // ── Operating hours ──
+    // ── Operating hours (local toggle + bulk save) ────────────────────────────
     const toggleDay = (i: number) =>
         setHours((p) =>
             p.map((h, idx) => (idx === i ? { ...h, isOpen: !h.isOpen } : h)),
@@ -211,7 +273,29 @@ const Settings = () => {
             p.map((h, idx) => (idx === i ? { ...h, [field]: v } : h)),
         );
 
-    // ── Peak hours ──
+    const saveHours = async () => {
+        setSavingHours(true);
+        try {
+            await Promise.all(
+                hours.map((h, i) => {
+                    const raw = venueHoursRaw.find((r) => r.dayOfWeek === i);
+                    if (!raw) return Promise.resolve();
+                    return updateVenueHours(raw.id, {
+                        openTime: h.openTime,
+                        closeTime: h.closeTime,
+                        isClosed: !h.isOpen,
+                    });
+                }),
+            );
+            toast.success('Operating hours saved');
+        } catch {
+            toast.error('Failed to save hours');
+        } finally {
+            setSavingHours(false);
+        }
+    };
+
+    // ── Peak hours ────────────────────────────────────────────────────────────
     const getSportPeak = (sport: string) =>
         peakConfigs.find((c) => c.sport === sport) || {
             sport,
@@ -270,7 +354,8 @@ const Settings = () => {
         );
     };
 
-    const removePeakSlot = (sport: string, slotId: string) => {
+    const removePeakSlot = async (sport: string, slotId: string) => {
+        // Optimistic remove
         setPeakConfigs((prev) =>
             prev.map((c) =>
                 c.sport === sport
@@ -278,6 +363,15 @@ const Settings = () => {
                     : c,
             ),
         );
+        // Only hit API if it's a real persisted ID (not a temp local one)
+        if (!slotId.startsWith('p') || slotId.length > 12) {
+            try {
+                await deletePeakHourPricing(slotId);
+            } catch {
+                toast.error('Failed to delete peak slot');
+                fetchPeakHours(); // Revert on error
+            }
+        }
     };
 
     const togglePeakDay = (sport: string, slotId: string, day: string) => {
@@ -290,7 +384,36 @@ const Settings = () => {
         updatePeakSlot(sport, slotId, { days });
     };
 
-    // ── Court CRUD ──
+    const savePeakHours = async () => {
+        setSavingPeak(true);
+        try {
+            const slots = peakConfigs.flatMap((c) => c.slots);
+            await Promise.all(
+                slots
+                    .filter((s) => peakRaw.find((r) => r.id === s.id))
+                    .map((s) => {
+                        const rawIndex =
+                            s.days.length === 1
+                                ? SHORT_DAYS.indexOf(s.days[0])
+                                : -1;
+                        const dayOfWeek = rawIndex >= 0 ? rawIndex : undefined;
+                        return updatePeakHourPricing(s.id, {
+                            startTime: s.startTime,
+                            endTime: s.endTime,
+                            ...(dayOfWeek !== undefined && { dayOfWeek }),
+                        });
+                    }),
+            );
+            toast.success('Peak hours & pricing saved');
+            fetchPeakHours();
+        } catch {
+            toast.error('Failed to save peak hours');
+        } finally {
+            setSavingPeak(false);
+        }
+    };
+
+    // ── Court CRUD ────────────────────────────────────────────────────────────
     const startEdit = (court: CourtData) => {
         setEditingCourtId(court.id);
         setEditForm({ ...court });
@@ -299,38 +422,84 @@ const Settings = () => {
         setEditingCourtId(null);
         setEditForm(null);
     };
-    const saveEdit = () => {
+    const saveEdit = async () => {
         if (!editForm) return;
-        setCourts((p) => p.map((c) => (c.id === editForm.id ? editForm : c)));
-        cancelEdit();
-        toast.success('Court updated');
+        try {
+            const environment: CourtEnvironment = editForm.roofed
+                ? 'INDOOR'
+                : 'OUTDOOR';
+            const status: CourtStatus = editForm.isActive
+                ? 'ACTIVE'
+                : 'INACTIVE';
+            await updateCourt(editForm.id, {
+                name: editForm.name,
+                environment,
+                status,
+            });
+            cancelEdit();
+            toast.success('Court updated');
+            fetchCourts();
+        } catch {
+            toast.error('Failed to update court');
+        }
     };
-    const addCourt = () => {
+    const addCourt = async () => {
         if (!newCourt.name.trim()) {
             toast.error('Court name is required');
             return;
         }
-        setCourts((p) => [...p, { ...newCourt, id: `c${Date.now()}` }]);
-        setShowAddForm(false);
-        setNewCourt({
-            name: '',
-            sport: activeSport,
-            surfaceMaterial: '',
-            lighting: 'LED Floodlights',
-            roofed: false,
-            isActive: true,
-        });
-        toast.success('Court added');
+        try {
+            const sport: SportType =
+                newCourt.sport === 'Padel' ? 'PADEL' : 'PICKELBALL';
+            const environment: CourtEnvironment = newCourt.roofed
+                ? 'INDOOR'
+                : 'OUTDOOR';
+            // Map display surface back to API enum — fallback to ARTIFICIAL_GRASS
+            const surfaceMap: Record<string, CourtSurface> = {
+                'Artificial Turf': 'ARTIFICIAL_GRASS',
+                'Panoramic Glass': 'PANORAMIC_GLASS',
+                'Synthetic Grass': 'ARTIFICIAL_GRASS',
+                'Sand-filled Turf': 'SAND_FILLED_ARTIFICIAL_GRASS',
+                'Cushioned Acrylic': 'CUSHIONED_ACRYLIC',
+                'Hard Court': 'ASPHALT',
+                'Indoor Wood': 'CUSHIONED_ACRYLIC',
+                'Outdoor Concrete': 'CONCRETE',
+            };
+            await createCourt({
+                name: newCourt.name,
+                sport,
+                environment,
+                surface:
+                    surfaceMap[newCourt.surfaceMaterial] ?? 'ARTIFICIAL_GRASS',
+            });
+            setShowAddForm(false);
+            setNewCourt({
+                name: '',
+                sport: activeSport,
+                surfaceMaterial: '',
+                lighting: 'LED Floodlights',
+                roofed: false,
+                isActive: true,
+            });
+            toast.success('Court added');
+            fetchCourts();
+        } catch {
+            toast.error('Failed to add court');
+        }
     };
-    const deleteCourt = () => {
+    const handleDeleteCourt = async () => {
         if (!deleteCourtId) return;
-        setCourts((p) => p.filter((c) => c.id !== deleteCourtId));
-        setDowntimes((p) => p.filter((d) => d.courtId !== deleteCourtId));
-        setDeleteCourtId(null);
-        toast.success('Court deleted');
+        try {
+            await deleteCourtApi(deleteCourtId);
+            setDeleteCourtId(null);
+            toast.success('Court deleted');
+            fetchCourts();
+        } catch {
+            toast.error('Failed to delete court');
+        }
     };
 
-    // ── Downtime CRUD ──
+    // ── Downtime (local only — no API yet) ────────────────────────────────────
     const addDowntimeEntry = () => {
         if (
             !newDowntime.courtId ||
@@ -340,33 +509,49 @@ const Settings = () => {
             toast.error('Court, date & reason required');
             return;
         }
-        setDowntimes((p) => [
-            ...p,
-            {
-                id: `d${Date.now()}`,
-                courtId: newDowntime.courtId,
-                startDate: newDowntime.startDate,
-                endDate: newDowntime.endDate || newDowntime.startDate,
-                reason: newDowntime.reason,
-            },
-        ]);
         setShowAddDowntime(null);
         setNewDowntime({ courtId: '', startDate: '', endDate: '', reason: '' });
         toast.success('Downtime scheduled');
     };
-    const removeDowntime = (id: string) => {
-        setDowntimes((p) => p.filter((d) => d.id !== id));
+    const removeDowntime = (_id: string) => {
         toast.success('Downtime removed');
     };
 
-    // ── Facility ──
-    const toggleAmenity = (amenity: string) => {
+    // ── Facility / Amenities ──────────────────────────────────────────────────
+    const toggleAmenity = async (amenityName: string) => {
+        const existing = amenities.find((a) => a.name === amenityName);
+        if (!existing) return;
+        // Optimistic toggle in UI
         setFacility((prev) => ({
             ...prev,
-            amenities: prev.amenities.includes(amenity)
-                ? prev.amenities.filter((a) => a !== amenity)
-                : [...prev.amenities, amenity],
+            amenities: prev.amenities.includes(amenityName)
+                ? prev.amenities.filter((a) => a !== amenityName)
+                : [...prev.amenities, amenityName],
         }));
+        try {
+            if (facility.amenities.includes(amenityName)) {
+                await deleteAmenity(existing.id);
+            } else {
+                await updateAmenity(existing.id, { name: amenityName });
+            }
+        } catch {
+            toast.error('Failed to update amenity');
+            fetchAmenities(); // Revert on error
+        }
+    };
+
+    const saveFacility = async () => {
+        setSavingFacility(true);
+        try {
+            if (bookingPolicy) {
+                await updateBookingPolicy({});
+            }
+            toast.success('Facility info saved');
+        } catch {
+            toast.error('Failed to save facility info');
+        } finally {
+            setSavingFacility(false);
+        }
     };
 
     return (
@@ -379,6 +564,9 @@ const Settings = () => {
                     <ArrowLeft className="h-5 w-5" />
                 </button>
                 <h1 className="font-semibold">{sectionTitle[section]}</h1>
+                {loadingSection === section && (
+                    <span className="ml-auto text-xs opacity-70">Loading…</span>
+                )}
             </header>
 
             <main className="mx-auto max-w-lg px-4 pt-4">
@@ -390,6 +578,7 @@ const Settings = () => {
                         facility={facility}
                         onNavigate={(s, sport) => {
                             setSection(s);
+
                             if (sport) {
                                 setActiveSport(sport);
                                 setNewCourt((p) => ({ ...p, sport }));
@@ -402,6 +591,8 @@ const Settings = () => {
                         hours={hours}
                         toggleDay={toggleDay}
                         updateTime={updateTime}
+                        onSave={saveHours}
+                        saving={savingHours}
                     />
                 )}
                 {section === 'peak' && (
@@ -412,6 +603,8 @@ const Settings = () => {
                         removeSlot={removePeakSlot}
                         toggleDay={togglePeakDay}
                         updatePrice={updateSportPrice}
+                        onSave={savePeakHours}
+                        saving={savingPeak}
                     />
                 )}
                 {section === 'courts' && (
@@ -468,6 +661,8 @@ const Settings = () => {
                             setFacility((p) => ({ ...p, bio }))
                         }
                         onToggleAmenity={toggleAmenity}
+                        onSave={saveFacility}
+                        saving={savingFacility}
                     />
                 )}
             </main>
@@ -487,7 +682,7 @@ const Settings = () => {
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                            onClick={deleteCourt}
+                            onClick={handleDeleteCourt}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                             Delete

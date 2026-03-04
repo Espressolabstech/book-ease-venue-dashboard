@@ -1,18 +1,21 @@
-import { Save } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
-import { toast } from 'sonner';
 
 const HoursSection = ({
     hours,
     toggleDay,
     updateTime,
+    onSave,
+    saving,
 }: {
     hours: OperatingHours[];
     toggleDay: (i: number) => void;
     updateTime: (i: number, f: 'openTime' | 'closeTime', v: string) => void;
+    onSave: () => void;
+    saving?: boolean;
 }) => {
     return (
         <Card>
@@ -68,11 +71,13 @@ const HoursSection = ({
                         )}
                     </div>
                 ))}
-                <Button
-                    className="w-full"
-                    onClick={() => toast.success('Operating hours saved')}
-                >
-                    <Save className="mr-1.5 h-4 w-4" /> Save Hours
+                <Button className="w-full" onClick={onSave} disabled={saving}>
+                    {saving ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    Save Hours
                 </Button>
             </CardContent>
         </Card>

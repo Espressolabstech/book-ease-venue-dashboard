@@ -36,7 +36,7 @@ export const updateCourt = async (
 ): Promise<UpdateCourtResponse> => {
     return apiClient({
         url: endpoints.updateCourt(courtId),
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

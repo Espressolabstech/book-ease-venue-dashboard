@@ -17,7 +17,7 @@ export const updateCourtPricing = async (
 ): Promise<UpdateCourtPricingResponse> => {
     return apiClient({
         url: endpoints.updateCourtPricing(id),
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

@@ -129,11 +129,11 @@ declare global {
     }
 
     interface GetCourtsResponse {
-        courts: CourtModel[];
+        data: { courts: CourtModel[] };
     }
 
     interface ViewCourtResponse {
-        court: CourtModel;
+        data: { court: CourtModel };
     }
 
     interface CreateCourtImagePayload {
@@ -173,7 +173,7 @@ declare global {
     }
 
     interface CreateCourtResponse {
-        court: CourtModel;
+        data: { court: CourtModel };
     }
 
     interface UpdateCourtPayload {
@@ -185,7 +185,7 @@ declare global {
     }
 
     interface UpdateCourtResponse {
-        court: CourtModel;
+        data: { court: CourtModel };
     }
 
     type DeleteCourtResponse = Record<string, never>;

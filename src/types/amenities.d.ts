@@ -9,7 +9,7 @@ declare global {
     }
 
     interface ListAmenitiesResponse {
-        amenities: AmenityModel[];
+        data: { amenities: AmenityModel[] };
     }
 
     interface UpdateAmenityPayload {
@@ -18,7 +18,7 @@ declare global {
     }
 
     interface UpdateAmenityResponse {
-        amenity: AmenityModel;
+        data: { amenity: AmenityModel };
     }
 
     type DeleteAmenityResponse = Record<string, never>;

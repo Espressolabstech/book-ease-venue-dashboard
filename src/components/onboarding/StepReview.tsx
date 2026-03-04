@@ -88,8 +88,13 @@ const StepReview = ({
             'Artificial Turf': 'ARTIFICIAL_TURF',
         };
         const DAY_TO_INT: Record<string, number> = {
-            Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
-            Thursday: 4, Friday: 5, Saturday: 6,
+            Sunday: 0,
+            Monday: 1,
+            Tuesday: 2,
+            Wednesday: 3,
+            Thursday: 4,
+            Friday: 5,
+            Saturday: 6,
         };
 
         // ── Courts ────────────────────────────────────────────────────
@@ -122,13 +127,17 @@ const StepReview = ({
                 name: court.name,
                 sport: SPORT_MAP[court.sport] ?? court.sport.toUpperCase(),
                 courtEnvironment: court.is_indoor ? 'INDOOR' : 'OUTDOOR',
-                surface: SURFACE_MAP[court.surface_material] ?? court.surface_material,
+                surface:
+                    SURFACE_MAP[court.surface_material] ??
+                    court.surface_material,
                 timeSlots,
                 pricing: pricing
                     ? {
                           pricePerHour: parseFloat(pricing.base_rate) || 0,
                           ...(pricing.weekend_rate_enabled && {
-                              weekendPricePerHour: parseFloat(pricing.weekend_rate),
+                              weekendPricePerHour: parseFloat(
+                                  pricing.weekend_rate,
+                              ),
                               weekendDays: weekendDaysInt,
                           }),
                       }
@@ -190,6 +199,7 @@ const StepReview = ({
             toast.error('Please agree to the terms and conditions.');
             return;
         }
+        if (submitting) return; // prevent double-submission
         setSubmitting(true);
         try {
             await venueOnboard(buildPayload());
@@ -209,15 +219,16 @@ const StepReview = ({
 
     useEffect(() => {
         if (!triggerSave) return;
-        (async () => {
-            if (!agreed) {
-                toast.error('Please agree to the terms and conditions.');
-                onSaveComplete(false);
-                return;
-            }
-            await submitForReview();
-            onSaveComplete(true);
-        })();
+        if (!agreed) {
+            toast.error('Please agree to the terms and conditions.');
+            onSaveComplete(false);
+            return;
+        }
+        // Delegate to the button handler — avoids a second API call when
+        // the user already clicked "Submit for Review" directly.
+        if (!submitting) {
+            submitForReview().then(() => onSaveComplete(true));
+        }
     }, [triggerSave]); // eslint-disable-line
 
     useEffect(() => {
@@ -297,29 +308,39 @@ const StepReview = ({
                     <div className="grid gap-2 text-sm">
                         <div>
                             <span className="text-muted-foreground">Name:</span>{' '}
-                            <span className="font-medium">{step1?.venueName}</span>
+                            <span className="font-medium">
+                                {step1?.venueName}
+                            </span>
                         </div>
                         <div>
                             <span className="text-muted-foreground">City:</span>{' '}
                             {step1?.city}
                         </div>
                         <div>
-                            <span className="text-muted-foreground">Address:</span>{' '}
+                            <span className="text-muted-foreground">
+                                Address:
+                            </span>{' '}
                             {step1?.venueAddress}
                         </div>
                         {step1?.description && (
                             <div>
-                                <span className="text-muted-foreground">Description:</span>{' '}
+                                <span className="text-muted-foreground">
+                                    Description:
+                                </span>{' '}
                                 {step1.description}
                             </div>
                         )}
                         <div>
-                            <span className="text-muted-foreground">Email:</span>{' '}
+                            <span className="text-muted-foreground">
+                                Email:
+                            </span>{' '}
                             {step1?.venuemail}
                         </div>
                         {step1?.venuePhone && (
                             <div>
-                                <span className="text-muted-foreground">WhatsApp:</span>{' '}
+                                <span className="text-muted-foreground">
+                                    WhatsApp:
+                                </span>{' '}
                                 +91 {step1.venuePhone}
                             </div>
                         )}
@@ -337,12 +358,18 @@ const StepReview = ({
                                 !h.is_open && 'opacity-50',
                             )}
                         >
-                            <span className="font-medium">{DAYS[h.day_of_week]}</span>
+                            <span className="font-medium">
+                                {DAYS[h.day_of_week]}
+                            </span>
                             <span>
                                 {h.is_open ? (
-                                    <span>{h.opening_time} – {h.closing_time}</span>
+                                    <span>
+                                        {h.opening_time} – {h.closing_time}
+                                    </span>
                                 ) : (
-                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Closed</span>
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                                        Closed
+                                    </span>
                                 )}
                             </span>
                         </div>
@@ -352,13 +379,19 @@ const StepReview = ({
 
             <SectionCard title="Courts" step={3}>
                 {step3.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">No courts added</p>
+                    <p className="text-sm text-muted-foreground italic">
+                        No courts added
+                    </p>
                 ) : (
                     <div className="space-y-3">
                         {step3.map((c: any, i: number) => (
                             <div key={i} className="flex items-center gap-3">
                                 {c.photo_url ? (
-                                    <img src={c.photo_url} alt={c.name} className="h-10 w-10 rounded-lg object-cover" />
+                                    <img
+                                        src={c.photo_url}
+                                        alt={c.name}
+                                        className="h-10 w-10 rounded-lg object-cover"
+                                    />
                                 ) : (
                                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-lg">
                                         {c.sport === 'Padel' ? '🏸' : '🏓'}
@@ -366,18 +399,23 @@ const StepReview = ({
                                 )}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium truncate">{c.name}</span>
-                                        <span className={cn(
-                                            'rounded-full px-2 py-0.5 text-[10px] font-bold',
-                                            c.sport === 'Padel'
-                                                ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
-                                                : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))]',
-                                        )}>
+                                        <span className="text-sm font-medium truncate">
+                                            {c.name}
+                                        </span>
+                                        <span
+                                            className={cn(
+                                                'rounded-full px-2 py-0.5 text-[10px] font-bold',
+                                                c.sport === 'Padel'
+                                                    ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
+                                                    : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))]',
+                                            )}
+                                        >
                                             {c.sport}
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                        {c.surface_material} · {c.is_indoor ? 'Indoor' : 'Outdoor'}
+                                        {c.surface_material} ·{' '}
+                                        {c.is_indoor ? 'Indoor' : 'Outdoor'}
                                     </p>
                                 </div>
                             </div>
@@ -388,13 +426,18 @@ const StepReview = ({
 
             <SectionCard title="Facilities & Amenities" step={4}>
                 {step4.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">No amenities added</p>
+                    <p className="text-sm text-muted-foreground italic">
+                        No amenities added
+                    </p>
                 ) : (
                     <div className="space-y-3">
                         {standardAmenities.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
                                 {standardAmenities.map((a: any) => (
-                                    <span key={a.name} className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]">
+                                    <span
+                                        key={a.name}
+                                        className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]"
+                                    >
                                         {a.name}
                                     </span>
                                 ))}
@@ -402,10 +445,15 @@ const StepReview = ({
                         )}
                         {customAmenities.length > 0 && (
                             <div>
-                                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Your Additions</p>
+                                <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                                    Your Additions
+                                </p>
                                 <div className="flex flex-wrap gap-1.5">
                                     {customAmenities.map((a: any) => (
-                                        <span key={a.name} className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]">
+                                        <span
+                                            key={a.name}
+                                            className="rounded-full bg-[hsl(var(--admin-navy))] px-3 py-1 text-xs text-[hsl(var(--admin-navy-foreground))]"
+                                        >
                                             {a.name}
                                         </span>
                                     ))}
@@ -418,19 +466,42 @@ const StepReview = ({
 
             <SectionCard title="Pricing" step={5}>
                 {step3.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">No pricing configured</p>
+                    <p className="text-sm text-muted-foreground italic">
+                        No pricing configured
+                    </p>
                 ) : (
                     <div className="space-y-4">
                         {step3.map((c: any, i: number) => {
                             const p = step5[String(i)];
                             return (
                                 <div key={i} className="space-y-1">
-                                    <p className="text-sm font-medium">{c.name}</p>
+                                    <p className="text-sm font-medium">
+                                        {c.name}
+                                    </p>
                                     <div className="text-xs text-muted-foreground space-y-0.5">
-                                        <p>Base Rate: ₹{p?.base_rate || 0}/hr</p>
-                                        <p>Durations: {((p?.booking_durations as number[]) || [60]).map((d: number) => `${d} min`).join(', ')}</p>
-                                        {p?.peak_enabled && <p>Peak: ₹{p.peak_rate}/hr ({p.peak_time_start} – {p.peak_time_end})</p>}
-                                        {p?.weekend_rate_enabled && <p>Weekend: ₹{p.weekend_rate}/hr</p>}
+                                        <p>
+                                            Base Rate: ₹{p?.base_rate || 0}/hr
+                                        </p>
+                                        <p>
+                                            Durations:{' '}
+                                            {(
+                                                (p?.booking_durations as number[]) || [
+                                                    60,
+                                                ]
+                                            )
+                                                .map((d: number) => `${d} min`)
+                                                .join(', ')}
+                                        </p>
+                                        {p?.peak_enabled && (
+                                            <p>
+                                                Peak: ₹{p.peak_rate}/hr (
+                                                {p.peak_time_start} –{' '}
+                                                {p.peak_time_end})
+                                            </p>
+                                        )}
+                                        {p?.weekend_rate_enabled && (
+                                            <p>Weekend: ₹{p.weekend_rate}/hr</p>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -441,27 +512,72 @@ const StepReview = ({
 
             <SectionCard title="Booking Rules" step={6}>
                 {!step6 ? (
-                    <p className="text-sm text-muted-foreground italic">Not configured</p>
+                    <p className="text-sm text-muted-foreground italic">
+                        Not configured
+                    </p>
                 ) : (
                     <div className="text-sm space-y-1">
-                        <p><span className="text-muted-foreground">Advance window:</span> {step6.advanceDays} day(s)</p>
-                        <p><span className="text-muted-foreground">Min notice:</span> {step6.minNotice} hour(s)</p>
-                        <p><span className="text-muted-foreground">Cancellation:</span> {step6.cancellationPolicy}</p>
-                        <p><span className="text-muted-foreground">Auto-confirm:</span> {step6.autoConfirm ? 'Yes' : 'No'}</p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Advance window:
+                            </span>{' '}
+                            {step6.advanceDays} day(s)
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Min notice:
+                            </span>{' '}
+                            {step6.minNotice} hour(s)
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Cancellation:
+                            </span>{' '}
+                            {step6.cancellationPolicy}
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Auto-confirm:
+                            </span>{' '}
+                            {step6.autoConfirm ? 'Yes' : 'No'}
+                        </p>
                     </div>
                 )}
             </SectionCard>
 
             <SectionCard title="Payout Details" step={7}>
                 {!step7 ? (
-                    <p className="text-sm text-muted-foreground italic">Not configured</p>
+                    <p className="text-sm text-muted-foreground italic">
+                        Not configured
+                    </p>
                 ) : (
                     <div className="text-sm space-y-1">
-                        <p><span className="text-muted-foreground">Bank:</span> {step7.bankName}</p>
-                        <p><span className="text-muted-foreground">Holder:</span> {step7.holderName}</p>
-                        <p><span className="text-muted-foreground">Account:</span> {maskAccount(step7.accountNumber || '')}</p>
-                        <p><span className="text-muted-foreground">IFSC:</span> {maskIfsc(step7.ifscCode || '')}</p>
-                        <p><span className="text-muted-foreground">Schedule:</span> {step7.schedule}</p>
+                        <p>
+                            <span className="text-muted-foreground">Bank:</span>{' '}
+                            {step7.bankName}
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Holder:
+                            </span>{' '}
+                            {step7.holderName}
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Account:
+                            </span>{' '}
+                            {maskAccount(step7.accountNumber || '')}
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">IFSC:</span>{' '}
+                            {maskIfsc(step7.ifscCode || '')}
+                        </p>
+                        <p>
+                            <span className="text-muted-foreground">
+                                Schedule:
+                            </span>{' '}
+                            {step7.schedule}
+                        </p>
                     </div>
                 )}
             </SectionCard>
@@ -475,7 +591,8 @@ const StepReview = ({
                         className="mt-0.5"
                     />
                     <span className="text-sm">
-                        I confirm that the information I have provided is accurate and complete. I agree to the{' '}
+                        I confirm that the information I have provided is
+                        accurate and complete. I agree to the{' '}
                         <button
                             onClick={() => setTermsOpen(true)}
                             className="text-[hsl(var(--admin-navy))] underline font-medium"
@@ -492,7 +609,10 @@ const StepReview = ({
                     className="w-full bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))] hover:bg-[hsl(var(--admin-lime))]/90 h-12 text-base font-semibold"
                 >
                     {submitting ? (
-                        <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Submitting...</>
+                        <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />{' '}
+                            Submitting...
+                        </>
                     ) : (
                         'Submit for Review'
                     )}
@@ -502,16 +622,43 @@ const StepReview = ({
             <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
                 <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>Venue Partner Terms & Conditions</DialogTitle>
+                        <DialogTitle>
+                            Venue Partner Terms & Conditions
+                        </DialogTitle>
                     </DialogHeader>
                     <div className="prose prose-sm text-sm text-muted-foreground space-y-4">
-                        <p>These terms and conditions govern your use of the platform as a venue partner. By submitting your venue for review, you agree to the following:</p>
-                        <p><strong>1. Venue Listing.</strong> You warrant that all information provided during onboarding is accurate and up-to-date.</p>
-                        <p><strong>2. Commission.</strong> The platform charges a commission on each completed booking.</p>
-                        <p><strong>3. Payouts.</strong> Payouts are processed according to your selected schedule.</p>
-                        <p><strong>4. Cancellation.</strong> You must honour the cancellation policy selected during onboarding.</p>
-                        <p><strong>5. Data Protection.</strong> Both parties agree to handle player and venue data in accordance with applicable data protection regulations.</p>
-                        <p><strong>6. Termination.</strong> Either party may terminate this agreement with 30 days written notice.</p>
+                        <p>
+                            These terms and conditions govern your use of the
+                            platform as a venue partner. By submitting your
+                            venue for review, you agree to the following:
+                        </p>
+                        <p>
+                            <strong>1. Venue Listing.</strong> You warrant that
+                            all information provided during onboarding is
+                            accurate and up-to-date.
+                        </p>
+                        <p>
+                            <strong>2. Commission.</strong> The platform charges
+                            a commission on each completed booking.
+                        </p>
+                        <p>
+                            <strong>3. Payouts.</strong> Payouts are processed
+                            according to your selected schedule.
+                        </p>
+                        <p>
+                            <strong>4. Cancellation.</strong> You must honour
+                            the cancellation policy selected during onboarding.
+                        </p>
+                        <p>
+                            <strong>5. Data Protection.</strong> Both parties
+                            agree to handle player and venue data in accordance
+                            with applicable data protection regulations.
+                        </p>
+                        <p>
+                            <strong>6. Termination.</strong> Either party may
+                            terminate this agreement with 30 days written
+                            notice.
+                        </p>
                     </div>
                 </DialogContent>
             </Dialog>

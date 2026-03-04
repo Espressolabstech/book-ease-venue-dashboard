@@ -14,7 +14,7 @@ declare global {
     }
 
     interface GetBookingPolicyResponse {
-        bookingPolicy: BookingPolicyModel;
+        data: { bookingPolicy: BookingPolicyModel };
     }
 
     interface UpdateBookingPolicyPayload {
@@ -26,7 +26,7 @@ declare global {
     }
 
     interface UpdateBookingPolicyResponse {
-        bookingPolicy: BookingPolicyModel;
+        data: { bookingPolicy: BookingPolicyModel };
     }
 }
 

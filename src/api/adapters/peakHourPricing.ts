@@ -17,7 +17,7 @@ export const updatePeakHourPricing = async (
 ): Promise<UpdatePeakHourPricingResponse> => {
     return apiClient({
         url: endpoints.updatePeakHourPricing(id),
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

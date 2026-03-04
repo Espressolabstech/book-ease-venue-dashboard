@@ -14,7 +14,7 @@ declare global {
     }
 
     interface ListCourtPricingsResponse {
-        courtPricings: CourtPricingModel[];
+        data: { courtPricings: CourtPricingModel[] };
     }
 
     interface UpdateCourtPricingPayload {
@@ -24,7 +24,7 @@ declare global {
     }
 
     interface UpdateCourtPricingResponse {
-        courtPricing: CourtPricingModel;
+        data: { courtPricing: CourtPricingModel };
     }
 
     type DeleteCourtPricingResponse = Record<string, never>;

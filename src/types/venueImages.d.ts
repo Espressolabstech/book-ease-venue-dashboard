@@ -17,7 +17,7 @@ declare global {
     }
 
     interface ListVenueImagesResponse {
-        venueImages: VenueImageModel[];
+        data: { venueImages: VenueImageModel[] };
     }
 
     interface UpdateVenueImagePayload {
@@ -28,7 +28,7 @@ declare global {
     }
 
     interface UpdateVenueImageResponse {
-        venueImage: VenueImageModel;
+        data: { venueImage: VenueImageModel };
     }
 
     type DeleteVenueImageResponse = Record<string, never>;

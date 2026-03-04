@@ -15,7 +15,7 @@ declare global {
     }
 
     interface ListTimeSlotsResponse {
-        timeSlots: TimeSlotModel[];
+        data: { timeSlots: TimeSlotModel[] };
     }
 
     interface UpdateTimeSlotPayload {
@@ -26,7 +26,7 @@ declare global {
     }
 
     interface UpdateTimeSlotResponse {
-        timeSlot: TimeSlotModel;
+        data: { timeSlot: TimeSlotModel };
     }
 
     type DeleteTimeSlotResponse = Record<string, never>;

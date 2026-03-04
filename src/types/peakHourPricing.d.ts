@@ -17,7 +17,7 @@ declare global {
     }
 
     interface ListPeakHourPricingsResponse {
-        peakHourPricings: PeakHourPricingModel[];
+        data: { peakHourPricings: PeakHourPricingModel[] };
     }
 
     interface UpdatePeakHourPricingPayload {
@@ -30,7 +30,7 @@ declare global {
     }
 
     interface UpdatePeakHourPricingResponse {
-        peakHourPricing: PeakHourPricingModel;
+        data: { peakHourPricing: PeakHourPricingModel };
     }
 
     type DeletePeakHourPricingResponse = Record<string, never>;

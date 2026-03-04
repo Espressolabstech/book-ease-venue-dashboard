@@ -14,7 +14,7 @@ export const updateAmenity = async (
 ): Promise<UpdateAmenityResponse> => {
     return apiClient({
         url: endpoints.updateAmenities(id),
-        method: 'PUT',
+        method: 'PATCH',
         data: payload,
     });
 };

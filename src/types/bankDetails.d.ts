@@ -17,7 +17,7 @@ declare global {
     }
 
     interface ListBankDetailsResponse {
-        bankDetails: BankDetailsModel[];
+        data: { bankDetails: BankDetailsModel[] };
     }
 
     interface UpdateBankDetailsPayload {
@@ -29,7 +29,7 @@ declare global {
     }
 
     interface UpdateBankDetailsResponse {
-        bankDetails: BankDetailsModel;
+        data: { bankDetails: BankDetailsModel };
     }
 
     type DeleteBankDetailsResponse = Record<string, never>;
