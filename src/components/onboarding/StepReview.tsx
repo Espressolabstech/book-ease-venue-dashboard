@@ -133,9 +133,9 @@ const StepReview = ({
                 timeSlots,
                 pricing: pricing
                     ? {
-                          pricePerHour: parseFloat(pricing.base_rate) || 0,
+                          pricePerSlot: parseFloat(pricing.base_rate) || 0,
                           ...(pricing.weekend_rate_enabled && {
-                              weekendPricePerHour: parseFloat(
+                              weekendPricePerSlot: parseFloat(
                                   pricing.weekend_rate,
                               ),
                               weekendDays: weekendDaysInt,
@@ -147,7 +147,7 @@ const StepReview = ({
                         {
                             startTime: pricing.peak_time_start,
                             endTime: pricing.peak_time_end,
-                            pricePerHour: parseFloat(pricing.peak_rate) || 0,
+                            pricePerSlot: parseFloat(pricing.peak_rate) || 0,
                         },
                     ],
                 }),

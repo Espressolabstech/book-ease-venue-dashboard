@@ -5,7 +5,7 @@ declare global {
         dayOfWeek: number | null;
         startTime: string;
         endTime: string;
-        pricePerHour: number;
+        pricePerSlot: number;
         label: string | null;
         isActive: boolean;
         createdAt: string;
@@ -24,7 +24,7 @@ declare global {
         dayOfWeek?: number | null;
         startTime?: string;
         endTime?: string;
-        pricePerHour?: number;
+        pricePerSlot?: number;
         label?: string | null;
         isActive?: boolean;
     }

@@ -176,7 +176,7 @@ declare global {
 
     interface VenueImageUploadUrlResponse {
         message: string;
-        data: PresignedUploadResult[];
+        data: PresignedUploadResult[] | { images: PresignedUploadResult[] };
     }
 
     // kept for backward compat, prefer VenueImageUploadUrlResponse
@@ -237,15 +237,15 @@ declare global {
                 endTime: string;
             }[];
             pricing?: {
-                pricePerHour: number;
-                weekendPricePerHour?: number;
+                pricePerSlot: number;
+                weekendPricePerSlot?: number;
                 weekendDays?: string[];
             };
             peakHourPricings?: {
                 dayOfWeek?: number;
                 startTime: string;
                 endTime: string;
-                pricePerHour: number;
+                pricePerSlot: number;
                 label?: string;
             }[];
         }[];

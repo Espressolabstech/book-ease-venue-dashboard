@@ -57,4 +57,29 @@ export const endpoints = {
     listVenueImages: '/venue-images/list',
     updateVenueImage: (id: string) => `/venue-images/${id}/update`,
     deleteVenueImage: (id: string) => `/venue-images/${id}/delete`,
+
+    // Bookings endpoints
+    managerCreateBooking: '/bookings/manager/create',
+    cashPayment: (bookingId: string) =>
+        `/bookings/manager/${bookingId}/cash-payment`,
+    cancelBooking: (bookingId: string) =>
+        `/bookings/manager/${bookingId}/cancel`,
+    verifyBookingPayment: (bookingId: string) =>
+        `/bookings/${bookingId}/verify-payment`,
+    listVenueBookings: '/bookings/venue/list',
+    listVenuePlayers: '/bookings/venue/players',
+    getBooking: (bookingId: string) => `/bookings/manager/${bookingId}`,
+
+    // Available slots endpoint
+    availableSlots: (courtId: string, date: string) =>
+        `/venue-hours/available-slots?courtId=${courtId}&date=${date}`,
+
+    // Analytics endpoints
+    analytics: '/analytics',
+
+    // Players endpoints
+    playerStats: '/players/stats',
+    addPlayer: '/players/add',
+    listPlayers: '/players/list',
+    getPlayer: (playerId: string) => `/players/${playerId}`,
 };

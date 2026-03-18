@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-    DURATIONS,
     generateTimeOptions,
     WEEKEND_DAYS,
 } from '../../utils/pricing';
@@ -49,7 +48,7 @@ const StepPricing = ({
                 map[key] = existingMap[key] ?? {
                     court_id: key,
                     base_rate: '',
-                    booking_durations: [60],
+                    booking_durations: [30],
                     peak_enabled: false,
                     peak_time_start: '17:00',
                     peak_time_end: '21:00',
@@ -89,7 +88,6 @@ const StepPricing = ({
 
     const switchTab = (newIndex: number) => {
         setActiveTab(newIndex);
-        setErrors({});
     };
 
     const validateAll = () => {
@@ -101,8 +99,6 @@ const StepPricing = ({
             const prefix = court.name;
             if (!p.base_rate || parseFloat(p.base_rate) <= 0)
                 errs[`${key}_base`] = `${prefix}: Base rate is required`;
-            if (p.booking_durations.length === 0)
-                errs[`${key}_dur`] = `${prefix}: Select at least one duration`;
             if (p.peak_enabled) {
                 if (!p.peak_rate)
                     errs[`${key}_peak`] = `${prefix}: Peak rate required`;
@@ -129,6 +125,30 @@ const StepPricing = ({
                 return;
             }
             if (!validateAll()) {
+                const errs: Record<string, string> = {};
+                courts.forEach((court, i) => {
+                    const key = String(i);
+                    const p = pricingMap[key];
+                    if (!p) return;
+                    const prefix = court.name;
+                    if (!p.base_rate || parseFloat(p.base_rate) <= 0)
+                        errs[`${key}_base`] = `${prefix}: Base rate is required`;
+                    if (p.peak_enabled) {
+                        if (!p.peak_rate)
+                            errs[`${key}_peak`] = `${prefix}: Peak rate required`;
+                        else if (parseFloat(p.peak_rate) <= parseFloat(p.base_rate || '0'))
+                            errs[`${key}_peak`] = `${prefix}: Peak rate should be higher than base rate`;
+                    }
+                    if (p.weekend_rate_enabled && !p.weekend_rate)
+                        errs[`${key}_weekend`] = `${prefix}: Weekend rate required`;
+                });
+                const firstErrorIndex = courts.findIndex((_, i) => {
+                    const key = String(i);
+                    return errs[`${key}_base`] || errs[`${key}_peak`] || errs[`${key}_weekend`];
+                });
+                if (firstErrorIndex !== -1 && firstErrorIndex !== activeTab) {
+                    setActiveTab(firstErrorIndex);
+                }
                 toast.error('Please fix pricing errors before continuing.');
                 onSaveComplete(false);
                 return;
@@ -176,24 +196,6 @@ const StepPricing = ({
             </div>
         );
     }
-
-    const toggleDuration = (key: string, dur: number) => {
-        const p = pricingMap[key];
-        const current = p.booking_durations;
-        if (current.includes(dur)) {
-            if (current.length <= 1) {
-                toast.error('At least one duration must be selected.');
-                return;
-            }
-            updatePricing(key, {
-                booking_durations: current.filter((d) => d !== dur),
-            });
-        } else {
-            updatePricing(key, {
-                booking_durations: [...current, dur].sort((a, b) => a - b),
-            });
-        }
-    };
 
     const renderTimeline = (p: CourtPricing) => {
         if (!p.peak_enabled) return null;
@@ -253,30 +255,42 @@ const StepPricing = ({
             {/* Court tabs */}
             {courts.length > 1 && (
                 <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
-                    {courts.map((court, i) => (
-                        <button
-                            key={i}
-                            onClick={() => switchTab(i)}
-                            className={cn(
-                                'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                                i === activeTab
-                                    ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
-                                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
-                            )}
-                        >
-                            {court.name}
-                            <span
+                    {courts.map((court, i) => {
+                        const key = String(i);
+                        const hasError =
+                            !!errors[`${key}_base`] ||
+                            !!errors[`${key}_peak`] ||
+                            !!errors[`${key}_weekend`];
+                        return (
+                            <button
+                                key={i}
+                                onClick={() => switchTab(i)}
                                 className={cn(
-                                    'rounded-full px-2 py-0.5 text-[10px] font-bold',
-                                    court.sport === 'Padel'
-                                        ? 'bg-[hsl(var(--admin-navy-foreground))]/20'
-                                        : 'bg-[hsl(var(--admin-lime))]/30',
+                                    'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                                    i === activeTab
+                                        ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
+                                        : hasError
+                                          ? 'bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20'
+                                          : 'bg-muted text-muted-foreground hover:bg-muted/80',
                                 )}
                             >
-                                {court.sport}
-                            </span>
-                        </button>
-                    ))}
+                                {hasError && (
+                                    <span className="h-2 w-2 rounded-full bg-destructive shrink-0" />
+                                )}
+                                {court.name}
+                                <span
+                                    className={cn(
+                                        'rounded-full px-2 py-0.5 text-[10px] font-bold',
+                                        court.sport === 'Padel'
+                                            ? 'bg-[hsl(var(--admin-navy-foreground))]/20'
+                                            : 'bg-[hsl(var(--admin-lime))]/30',
+                                    )}
+                                >
+                                    {court.sport}
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
             )}
 
@@ -284,7 +298,7 @@ const StepPricing = ({
                 <div className="space-y-6">
                     {/* Base Rate */}
                     <div className="space-y-1.5">
-                        <Label>Base Rate (per hour) *</Label>
+                        <Label>Base Rate (per 30 min) *</Label>
                         <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                                 ₹
@@ -309,48 +323,11 @@ const StepPricing = ({
                             />
                         </div>
                         <p className="text-xs text-muted-foreground">
-                            Price per hour during standard hours.
+                            Price per 30-minute slot during standard hours.
                         </p>
                         {errors[`${currentKey}_base`] && (
                             <p className="text-xs text-destructive">
                                 {errors[`${currentKey}_base`]}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Booking Durations */}
-                    <div className="space-y-1.5">
-                        <Label>Available Booking Durations *</Label>
-                        <div className="flex flex-wrap gap-2">
-                            {DURATIONS.map((d) => {
-                                const active =
-                                    pricing.booking_durations.includes(d.value);
-                                return (
-                                    <button
-                                        key={d.value}
-                                        onClick={() => {
-                                            toggleDuration(currentKey, d.value);
-                                            setTimeout(
-                                                () =>
-                                                    autoSaveCourt(currentKey),
-                                                100,
-                                            );
-                                        }}
-                                        className={cn(
-                                            'rounded-full border px-4 py-1.5 text-sm font-medium transition-all',
-                                            active
-                                                ? 'border-[hsl(var(--admin-navy))] bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] scale-105'
-                                                : 'border-border text-foreground hover:border-muted-foreground',
-                                        )}
-                                    >
-                                        {d.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        {errors[`${currentKey}_dur`] && (
-                            <p className="text-xs text-destructive">
-                                {errors[`${currentKey}_dur`]}
                             </p>
                         )}
                     </div>
@@ -448,7 +425,7 @@ const StepPricing = ({
                                 </p>
 
                                 <div className="space-y-1.5">
-                                    <Label>Peak Rate (per hour) *</Label>
+                                    <Label>Peak Rate (per 30 min) *</Label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                                             ₹
@@ -572,7 +549,7 @@ const StepPricing = ({
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <Label>Weekend Rate (per hour) *</Label>
+                                    <Label>Weekend Rate (per 30 min) *</Label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                                             ₹

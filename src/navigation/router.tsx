@@ -10,6 +10,10 @@ import Dashboard from '../screens/Dashboard';
 import OnBoarding from '../screens/OnBoarding';
 import VenueInvite from '../screens/VenueInvite';
 import Settings from '../screens/Settings';
+import Bookings from '../screens/Bookings';
+import ListBookings from '../screens/Bookings/ListBookings';
+import Players from '../screens/Players';
+import Analytics from '../screens/Analytics';
 
 export const router = createBrowserRouter([
     {
@@ -31,5 +35,21 @@ export const router = createBrowserRouter([
     {
         path: path.settings,
         element: <ProtectedComponentWrapper children={<Settings />} />,
+    },
+    {
+        path: path.bookings,
+        element: <ProtectedComponentWrapper children={<Bookings />} />,
+    },
+    {
+        path: path.listBooking,
+        element: <ProtectedComponentWrapper children={<ListBookings />} />,
+    },
+    {
+        path: path.players,
+        element: <ProtectedComponentWrapper children={<Players />} />,
+    },
+    {
+        path: path.analytics,
+        element: <ProtectedComponentWrapper children={<Analytics />} />,
     },
 ]);

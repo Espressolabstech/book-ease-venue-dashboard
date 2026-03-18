@@ -87,8 +87,8 @@ declare global {
     interface CourtPricingModel {
         id: string;
         courtId: string;
-        pricePerHour: number;
-        weekendPricePerHour: number | null;
+        pricePerSlot: number;
+        weekendPricePerSlot: number | null;
         weekendDays: number[];
         createdAt: string;
         updatedAt: string;
@@ -100,7 +100,7 @@ declare global {
         dayOfWeek: number | null;
         startTime: string;
         endTime: string;
-        pricePerHour: number;
+        pricePerSlot: number;
         label: string | null;
         isActive: boolean;
         createdAt: string;
@@ -148,8 +148,8 @@ declare global {
     }
 
     interface CreateCourtPricingPayload {
-        pricePerHour: number;
-        weekendPricePerHour?: number | null;
+        pricePerSlot: number;
+        weekendPricePerSlot?: number | null;
         weekendDays?: number[];
     }
 
@@ -157,7 +157,7 @@ declare global {
         dayOfWeek?: number;
         startTime: string;
         endTime: string;
-        pricePerHour: number;
+        pricePerSlot: number;
         label?: string;
     }
 

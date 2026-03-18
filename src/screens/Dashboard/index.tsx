@@ -1,32 +1,34 @@
-import { BarChart3, CalendarDays, Plus, Settings, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { BarChart3, CalendarDays, Loader2, Plus, Settings, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockBookings } from '../../utils/mockData';
 import { Card, CardContent } from '../../components/ui/card';
 import { path } from '../../navigation/commanPaths';
+import { listVenueBookings } from '../../api/adapters/bookings';
+import { cn } from '../../utils/twMerge';
 
 const menuItems = [
     {
         icon: CalendarDays,
         label: 'Bookings',
-        path: '/manager/bookings',
+        path: path.listBooking,
         color: 'bg-primary/10 text-primary',
     },
     {
         icon: Users,
         label: 'Players',
-        path: '/manager/players',
+        path: path.players,
         color: 'bg-success/10 text-success',
     },
     {
         icon: Plus,
         label: 'On-site Booking',
-        path: '/manager/onsite-booking',
+        path: path.bookings,
         color: 'bg-primary/10 text-primary',
     },
     {
         icon: BarChart3,
         label: 'Analytics',
-        path: '/manager/analytics',
+        path: path.analytics,
         color: 'bg-destructive/10 text-destructive',
     },
     {
@@ -37,12 +39,44 @@ const menuItems = [
     },
 ];
 
+const statusStyle: Record<BookingStatus, string> = {
+    CONFIRMED: 'bg-primary/10 text-primary',
+    PENDING: 'bg-yellow-100 text-yellow-700',
+    COMPLETED: 'bg-muted text-muted-foreground',
+    CANCELLED: 'bg-destructive/10 text-destructive',
+    NO_SHOW: 'bg-orange-100 text-orange-700',
+};
+
+const statusLabel: Record<BookingStatus, string> = {
+    CONFIRMED: 'Confirmed',
+    PENDING: 'Pending',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
+    NO_SHOW: 'No Show',
+};
+
 const Dashboard = () => {
     const navigate = useNavigate();
-    const todayBookings = mockBookings.filter(
-        (b) => b.date === new Date().toISOString().split('T')[0],
-    );
-    const occupancy = Math.round((todayBookings.length / 15) * 100);
+    const [bookings, setBookings] = useState<BookingModel[]>([]);
+    const [total, setTotal] = useState<number | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const today = new Date().toISOString().split('T')[0];
+        listVenueBookings({ date: today, limit: 100 })
+            .then((res) => {
+                setBookings(res.data.bookings);
+                setTotal(res.data.pagination.total);
+            })
+            .catch(() => {
+                setBookings([]);
+                setTotal(0);
+            })
+            .finally(() => setLoading(false));
+    }, []);
+
+    const occupancy =
+        total !== null ? Math.round((total / 15) * 100) : null;
 
     return (
         <div className="min-h-screen bg-background">
@@ -57,7 +91,7 @@ const Dashboard = () => {
                     <Card>
                         <CardContent className="p-4 text-center">
                             <p className="text-3xl font-bold text-primary">
-                                {occupancy}%
+                                {occupancy !== null ? `${occupancy}%` : '—'}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 Occupancy
@@ -67,7 +101,7 @@ const Dashboard = () => {
                     <Card>
                         <CardContent className="p-4 text-center">
                             <p className="text-3xl font-bold text-foreground">
-                                {todayBookings.length}
+                                {total !== null ? total : '—'}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 Today's Bookings
@@ -98,43 +132,49 @@ const Dashboard = () => {
                     ))}
                 </div>
 
-                {/* Today's Bookings */}
+                {/* Upcoming Today */}
                 <h3 className="mt-6 text-sm font-semibold text-foreground">
                     Upcoming Today
                 </h3>
                 <div className="mt-2 space-y-2 pb-6">
-                    {todayBookings.map((b) => (
-                        <Card
-                            key={b.id}
-                            className="cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => navigate(`/manager/booking/${b.id}`)}
-                        >
-                            <CardContent className="flex items-center justify-between p-3">
-                                <div>
-                                    <p className="font-medium text-foreground">
-                                        {b.player.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {b.court_name} · {b.start_time} -{' '}
-                                        {b.end_time}
-                                    </p>
-                                </div>
-                                <span
-                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                        b.status === 'checked_in'
-                                            ? 'bg-success/10 text-success'
-                                            : 'bg-primary/10 text-primary'
-                                    }`}
-                                >
-                                    {b.status.replace('_', ' ')}
-                                </span>
-                            </CardContent>
-                        </Card>
-                    ))}
-                    {todayBookings.length === 0 && (
+                    {loading ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        </div>
+                    ) : bookings.length === 0 ? (
                         <p className="py-8 text-center text-sm text-muted-foreground">
                             No bookings today
                         </p>
+                    ) : (
+                        bookings.map((b) => (
+                            <Card
+                                key={b.id}
+                                className="cursor-pointer hover:shadow-md transition-shadow"
+                                onClick={() =>
+                                    navigate(`/manager/booking/${b.id}`)
+                                }
+                            >
+                                <CardContent className="flex items-center justify-between p-3">
+                                    <div>
+                                        <p className="font-medium text-foreground">
+                                            {b.user?.name ?? '—'}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {b.court?.name} · {b.startTime} –{' '}
+                                            {b.endTime}
+                                        </p>
+                                    </div>
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-2 py-0.5 text-xs font-medium',
+                                            statusStyle[b.status],
+                                        )}
+                                    >
+                                        {statusLabel[b.status]}
+                                    </span>
+                                </CardContent>
+                            </Card>
+                        ))
                     )}
                 </div>
             </main>

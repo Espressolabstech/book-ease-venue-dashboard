@@ -2,8 +2,8 @@ declare global {
     interface CourtPricingModel {
         id: string;
         courtId: string;
-        pricePerHour: number;
-        weekendPricePerHour: number | null;
+        pricePerSlot: number;
+        weekendPricePerSlot: number | null;
         weekendDays: number[];
         createdAt: string;
         updatedAt: string;
@@ -18,8 +18,8 @@ declare global {
     }
 
     interface UpdateCourtPricingPayload {
-        pricePerHour?: number;
-        weekendPricePerHour?: number | null;
+        pricePerSlot?: number;
+        weekendPricePerSlot?: number | null;
         weekendDays?: number[];
     }
 

@@ -184,7 +184,7 @@ const Settings = () => {
                 const courtPeaks = res.data.peakHourPricings;
                 configs.push({
                     sport,
-                    peakPrice: courtPeaks[0]?.pricePerHour ?? 0,
+                    peakPrice: courtPeaks[0]?.pricePerSlot ?? 0,
                     offPeakPrice: 0,
                     slots: courtPeaks.map((p) => ({
                         id: p.id,

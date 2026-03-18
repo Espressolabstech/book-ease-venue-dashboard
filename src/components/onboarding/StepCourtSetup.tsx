@@ -237,7 +237,9 @@ const StepCourtSetup = ({
                 venueId,
                 images: [{ type: 'PHOTO', mimetype: file.type || 'image/jpeg' }],
             });
-            const { uploadUrl, publicUrl } = res.data[0];
+            const item = (res.data as any).images?.[0] ?? (Array.isArray(res.data) ? res.data[0] : res.data);
+            if (!item?.uploadUrl) throw new Error('Invalid upload URL response');
+            const { uploadUrl, publicUrl } = item;
             await uploadToPresignedUrl(uploadUrl, file, file.type || 'image/jpeg');
             setForm((f) => ({ ...f, photo_url: publicUrl }));
         } catch (err: any) {

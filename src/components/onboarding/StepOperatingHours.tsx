@@ -59,6 +59,26 @@ const StepOperatingHours = ({
                     toast.error('Closing time must be after opening time.');
                     return false;
                 }
+                if (day.evening_open_time || day.evening_close_time) {
+                    if (!day.evening_open_time || !day.evening_close_time) {
+                        toast.error(
+                            'Evening session must have both open and close times.',
+                        );
+                        return false;
+                    }
+                    if (day.evening_open_time <= day.closing_time) {
+                        toast.error(
+                            'Evening session must start after the first session ends.',
+                        );
+                        return false;
+                    }
+                    if (day.evening_close_time <= day.evening_open_time) {
+                        toast.error(
+                            'Evening closing time must be after evening opening time.',
+                        );
+                        return false;
+                    }
+                }
             }
         }
         return true;
