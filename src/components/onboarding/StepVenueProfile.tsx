@@ -283,7 +283,7 @@ const StepVenueProfile = ({
     }, []);
 
     const autoSave = useCallback(
-        async (field: string, value: any) => {},
+        async (_field: string, _value: any) => {},
         [venueId, onSaving, onSaved],
     );
 
@@ -389,7 +389,8 @@ const StepVenueProfile = ({
                 venueId,
                 images: [{ type: isLogo ? 'LOGO' : 'COVER', mimetype: 'image/jpeg' }],
             });
-            const { uploadUrl, publicUrl } = res.data[0];
+            const images = Array.isArray(res.data) ? res.data : res.data.images;
+            const { uploadUrl, publicUrl } = images[0];
             await uploadToPresignedUrl(uploadUrl, blob, 'image/jpeg');
             if (isLogo) {
                 setLogoUrl(publicUrl);
@@ -423,7 +424,8 @@ const StepVenueProfile = ({
                     venueId,
                     images: [{ type: 'GALLERY', mimetype: file.type || 'image/jpeg' }],
                 });
-                const { uploadUrl, publicUrl } = res.data[0];
+                const images = Array.isArray(res.data) ? res.data : res.data.images;
+                const { uploadUrl, publicUrl } = images[0];
                 await uploadToPresignedUrl(uploadUrl, file, file.type || 'image/jpeg');
                 setGalleryUrls((prev) => [...prev, publicUrl]);
             } catch (err: any) {

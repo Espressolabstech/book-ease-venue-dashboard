@@ -7,7 +7,7 @@ const OnBoardingEntry = () => {
     const { token } = useParams<{ token: string }>();
     const navigate = useNavigate();
     const [status, setStatus] = useState<InvitationStatus>('loading');
-    const [invitation, setInvitation] = useState<InvitationData | null>(null);
+    const [invitation, _setInvitation] = useState<InvitationData | null>(null);
 
     useEffect(() => {
         if (!token) {
@@ -17,7 +17,7 @@ const OnBoardingEntry = () => {
         validateToken(token);
     }, [token]);
 
-    const validateToken = async (tokenValue: string) => {
+    const validateToken = async (_tokenValue: string) => {
         setStatus('loading');
 
         // Case B — expired
