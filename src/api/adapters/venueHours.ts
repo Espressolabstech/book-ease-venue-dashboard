@@ -8,6 +8,16 @@ export const listVenueHours = async (): Promise<ListVenueHoursResponse> => {
     });
 };
 
+export const saveVenueHour = async (
+    payload: SaveVenueHourPayload,
+): Promise<UpdateVenueHoursResponse> => {
+    return apiClient({
+        url: endpoints.saveVenueHour,
+        method: 'POST',
+        data: payload,
+    });
+};
+
 export const updateVenueHours = async (
     id: string,
     payload: UpdateVenueHoursPayload,

@@ -36,9 +36,11 @@ declare global {
         lighting: string;
         roofed: boolean;
         isActive: boolean;
+        pricePerSlot: number;
     }
 
     interface OperatingHours {
+        id?: string;
         day: string;
         isOpen: boolean;
         openTime: string;

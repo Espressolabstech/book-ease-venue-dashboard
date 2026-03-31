@@ -46,11 +46,11 @@ const CourtsSection = ({
                 <Zap className="h-4 w-4 text-primary shrink-0" />
                 <p className="text-sm text-foreground">
                     <span className="font-medium">
-                        AED {peakConfig.offPeakPrice}
+                        ₹{peakConfig.offPeakPrice}
                     </span>
                     <span className="text-muted-foreground"> off-peak · </span>
                     <span className="font-medium">
-                        AED {peakConfig.peakPrice}
+                        ₹{peakConfig.peakPrice}
                     </span>
                     <span className="text-muted-foreground"> peak</span>
                 </p>

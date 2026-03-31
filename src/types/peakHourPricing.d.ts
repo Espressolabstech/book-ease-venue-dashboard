@@ -20,6 +20,19 @@ declare global {
         data: { peakHourPricings: PeakHourPricingModel[] };
     }
 
+    interface CreatePeakHourPricingPayload {
+        courtId: string;
+        dayOfWeek?: number | null;
+        startTime: string;
+        endTime: string;
+        pricePerSlot: number;
+        label?: string | null;
+    }
+
+    interface CreatePeakHourPricingResponse {
+        data: { peakHourPricing: PeakHourPricingModel };
+    }
+
     interface UpdatePeakHourPricingPayload {
         dayOfWeek?: number | null;
         startTime?: string;

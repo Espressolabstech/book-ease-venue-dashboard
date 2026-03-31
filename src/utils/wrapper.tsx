@@ -23,7 +23,19 @@ export const DashboardWrapper = ({ children }: WrapperProps) => {
 
     if (isLoading) return <Loader />;
 
-    if (!data?.data.isOnBoarded) return <Navigate to="/onboarding" replace />;
+    if (!data?.data.isOnBoarded) {
+        const inviteVenueId = sessionStorage.getItem('inviteVenueId');
+        const inviteToken = sessionStorage.getItem('inviteToken');
+        if (inviteVenueId && inviteToken) {
+            return (
+                <Navigate
+                    to={`/onboarding/${inviteVenueId}/${inviteToken}/step/1`}
+                    replace
+                />
+            );
+        }
+        return <Navigate to={path.login} replace />;
+    }
 
     return children;
 };

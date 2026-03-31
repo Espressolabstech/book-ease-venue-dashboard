@@ -11,6 +11,16 @@ export const listPeakHourPricings = async (
     });
 };
 
+export const createPeakHourPricing = async (
+    payload: CreatePeakHourPricingPayload,
+): Promise<CreatePeakHourPricingResponse> => {
+    return apiClient({
+        url: endpoints.createPeakHourPricing,
+        method: 'POST',
+        data: payload,
+    });
+};
+
 export const updatePeakHourPricing = async (
     id: string,
     payload: UpdatePeakHourPricingPayload,

@@ -27,22 +27,20 @@ import {
 } from '../../api/adapters/courts';
 import {
     listVenueHours,
-    updateVenueHours,
+    saveVenueHour,
 } from '../../api/adapters/venueHours';
 import {
     listPeakHourPricings,
+    createPeakHourPricing,
     updatePeakHourPricing,
     deletePeakHourPricing,
 } from '../../api/adapters/peakHourPricing';
+import { updateCourtPricing } from '../../api/adapters/courtPricing';
 import {
     listAmenities,
-    updateAmenity,
+    createAmenity,
     deleteAmenity,
 } from '../../api/adapters/amenities';
-import {
-    getBookingPolicy,
-    updateBookingPolicy,
-} from '../../api/adapters/bookingPolicy';
 
 // ── Day index helpers ─────────────────────────────────────────────────────────
 const DAY_NAMES = [
@@ -83,6 +81,7 @@ function courtModelToCourtData(c: CourtModel): CourtData {
             c.environment === 'INDOOR' ? 'Indoor Lighting' : 'LED Floodlights',
         roofed: c.environment === 'INDOOR',
         isActive: c.status === 'ACTIVE',
+        pricePerSlot: c.courtPricings[0]?.pricePerSlot ?? 0,
     };
 }
 
@@ -102,16 +101,12 @@ const Settings = () => {
     const [courts, setCourts] = useState<CourtData[]>([]);
     const [courtsRaw, setCourtsRaw] = useState<CourtModel[]>([]);
     const [hours, setHours] = useState<OperatingHours[]>(defaultHours);
-    const [venueHoursRaw, setVenueHoursRaw] = useState<VenueHoursModel[]>([]);
     const [peakConfigs, setPeakConfigs] = useState<SportPeakConfig[]>([]);
-    const [peakRaw, setPeakRaw] = useState<PeakHourPricingModel[]>([]);
     const [amenities, setAmenities] = useState<AmenityModel[]>([]);
     const [facility, setFacility] = useState<FacilityInfo>({
         bio: '',
         amenities: [],
     });
-    const [bookingPolicy, setBookingPolicy] =
-        useState<BookingPolicyModel | null>(null);
 
     // ── Loading / saving flags ──
     const [loadingSection, setLoadingSection] = useState<Section | null>(null);
@@ -139,6 +134,7 @@ const Settings = () => {
         lighting: 'LED Floodlights',
         roofed: false,
         isActive: true,
+        pricePerSlot: 0,
     });
 
     // ── Data fetchers ────────────────────────────────────────────────────────────
@@ -160,7 +156,6 @@ const Settings = () => {
         setLoadingSection('hours');
         try {
             const res = await listVenueHours();
-            setVenueHoursRaw(res.data.venueHours);
             setHours(venueHoursToOperatingHours(res.data.venueHours));
         } catch {
             toast.error('Failed to load operating hours');
@@ -173,30 +168,55 @@ const Settings = () => {
         if (!courtsRaw.length) return;
         setLoadingSection('peak');
         try {
-            // Fetch peak hours for the first court (shared pricing model)
-            const firstCourtId = courtsRaw[0]?.id;
-            if (!firstCourtId) return;
-            const res = await listPeakHourPricings({ courtId: firstCourtId });
-            setPeakRaw(res.data.peakHourPricings);
-            const configs: SportPeakConfig[] = [];
-            const sports = ['Padel', 'Pickleball'];
-            for (const sport of sports) {
-                const courtPeaks = res.data.peakHourPricings;
-                configs.push({
-                    sport,
-                    peakPrice: courtPeaks[0]?.pricePerSlot ?? 0,
-                    offPeakPrice: 0,
-                    slots: courtPeaks.map((p) => ({
-                        id: p.id,
-                        startTime: p.startTime,
-                        endTime: p.endTime,
-                        days:
-                            p.dayOfWeek !== null
-                                ? [SHORT_DAYS[p.dayOfWeek]]
-                                : [],
+            const sportMap: Record<string, string> = {
+                PADEL: 'Padel',
+                PICKELBALL: 'Pickleball',
+            };
+
+            // Fetch peak pricings for every court, then group by sport
+            const allPeaks = await Promise.all(
+                courtsRaw.map((c) =>
+                    listPeakHourPricings({ courtId: c.id }).then((r) => ({
+                        sport: sportMap[c.sport] ?? c.sport,
+                        offPeakPrice: c.courtPricings[0]?.pricePerSlot ?? 0,
+                        peaks: r.data.peakHourPricings,
                     })),
-                });
+                ),
+            );
+
+            // One config per display-sport; last court of that sport wins for
+            // offPeakPrice (they should all be the same)
+            const bySport: Record<string, SportPeakConfig> = {};
+            for (const { sport, offPeakPrice, peaks } of allPeaks) {
+                if (!bySport[sport]) {
+                    bySport[sport] = {
+                        sport,
+                        offPeakPrice,
+                        peakPrice: peaks[0]?.pricePerSlot ?? 0,
+                        slots: peaks.map((p) => ({
+                            id: p.id,
+                            startTime: p.startTime,
+                            endTime: p.endTime,
+                            days:
+                                p.dayOfWeek !== null
+                                    ? [SHORT_DAYS[p.dayOfWeek]]
+                                    : [],
+                        })),
+                    };
+                }
             }
+
+            // Ensure both sports always appear (even if no courts exist yet)
+            const configs: SportPeakConfig[] = ['Padel', 'Pickleball'].map(
+                (sport) =>
+                    bySport[sport] ?? {
+                        sport,
+                        offPeakPrice: 0,
+                        peakPrice: 0,
+                        slots: [],
+                    },
+            );
+
             setPeakConfigs(configs);
         } catch {
             toast.error('Failed to load peak hours');
@@ -218,23 +238,13 @@ const Settings = () => {
         }
     }, []);
 
-    const fetchBookingPolicy = useCallback(async () => {
-        try {
-            const res = await getBookingPolicy();
-            setBookingPolicy(res.data.bookingPolicy);
-        } catch {
-            // No booking policy yet — ignore
-        }
-    }, []);
-
     // ── Initial load ─────────────────────────────────────────────────────────────
 
     useEffect(() => {
         fetchCourts();
         fetchHours();
         fetchAmenities();
-        fetchBookingPolicy();
-    }, [fetchCourts, fetchHours, fetchAmenities, fetchBookingPolicy]);
+    }, [fetchCourts, fetchHours, fetchAmenities]);
 
     useEffect(() => {
         if (courtsRaw.length) fetchPeakHours();
@@ -277,17 +287,17 @@ const Settings = () => {
         setSavingHours(true);
         try {
             await Promise.all(
-                hours.map((h, i) => {
-                    const raw = venueHoursRaw.find((r) => r.dayOfWeek === i);
-                    if (!raw) return Promise.resolve();
-                    return updateVenueHours(raw.id, {
-                        openTime: h.openTime,
-                        closeTime: h.closeTime,
+                hours.map((h, i) =>
+                    saveVenueHour({
+                        dayOfWeek: i,
+                        openTime: h.isOpen ? h.openTime : '00:00',
+                        closeTime: h.isOpen ? h.closeTime : '00:00',
                         isClosed: !h.isOpen,
-                    });
-                }),
+                    }),
+                ),
             );
             toast.success('Operating hours saved');
+            fetchHours();
         } catch {
             toast.error('Failed to save hours');
         } finally {
@@ -363,8 +373,9 @@ const Settings = () => {
                     : c,
             ),
         );
-        // Only hit API if it's a real persisted ID (not a temp local one)
-        if (!slotId.startsWith('p') || slotId.length > 12) {
+        // Only hit API for persisted IDs (temp IDs start with 'p' followed by a timestamp)
+        const isTempId = /^p\d+$/.test(slotId);
+        if (!isTempId) {
             try {
                 await deletePeakHourPricing(slotId);
             } catch {
@@ -387,23 +398,72 @@ const Settings = () => {
     const savePeakHours = async () => {
         setSavingPeak(true);
         try {
-            const slots = peakConfigs.flatMap((c) => c.slots);
+            const apiSportMap: Record<string, string> = {
+                Padel: 'PADEL',
+                Pickleball: 'PICKELBALL',
+            };
+            // Find the first active court for each display-sport
+            const courtBySport: Record<string, string> = {};
+            for (const c of courtsRaw) {
+                const displaySport =
+                    c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
+                if (!courtBySport[displaySport]) {
+                    courtBySport[displaySport] = c.id;
+                }
+            }
+
             await Promise.all(
-                slots
-                    .filter((s) => peakRaw.find((r) => r.id === s.id))
-                    .map((s) => {
-                        const rawIndex =
+                peakConfigs.flatMap((c) =>
+                    c.slots.map((s) => {
+                        const dayOfWeek =
                             s.days.length === 1
                                 ? SHORT_DAYS.indexOf(s.days[0])
-                                : -1;
-                        const dayOfWeek = rawIndex >= 0 ? rawIndex : undefined;
+                                : null;
+                        const isNewSlot = /^p\d+$/.test(s.id);
+                        if (isNewSlot) {
+                            const courtId = courtBySport[c.sport];
+                            if (!courtId) return Promise.resolve();
+                            return createPeakHourPricing({
+                                courtId,
+                                startTime: s.startTime,
+                                endTime: s.endTime,
+                                pricePerSlot: c.peakPrice,
+                                ...(dayOfWeek !== null && dayOfWeek >= 0
+                                    ? { dayOfWeek }
+                                    : {}),
+                            });
+                        }
                         return updatePeakHourPricing(s.id, {
                             startTime: s.startTime,
                             endTime: s.endTime,
-                            ...(dayOfWeek !== undefined && { dayOfWeek }),
+                            pricePerSlot: c.peakPrice,
+                            ...(dayOfWeek !== null && dayOfWeek >= 0
+                                ? { dayOfWeek }
+                                : {}),
                         });
                     }),
+                ),
             );
+
+            // Also update offPeakPrice (base court pricing) for each sport
+            await Promise.all(
+                peakConfigs.map((c) => {
+                    const apiSport = apiSportMap[c.sport];
+                    const sportCourts = courtsRaw.filter(
+                        (r) => r.sport === apiSport,
+                    );
+                    return Promise.all(
+                        sportCourts
+                            .filter((r) => r.courtPricings[0])
+                            .map((r) =>
+                                updateCourtPricing(r.courtPricings[0].id, {
+                                    pricePerSlot: c.offPeakPrice,
+                                }),
+                            ),
+                    );
+                }),
+            );
+
             toast.success('Peak hours & pricing saved');
             fetchPeakHours();
         } catch {
@@ -448,6 +508,14 @@ const Settings = () => {
             toast.error('Court name is required');
             return;
         }
+        if (!newCourt.surfaceMaterial) {
+            toast.error('Surface material is required');
+            return;
+        }
+        if (!newCourt.pricePerSlot || newCourt.pricePerSlot <= 0) {
+            toast.error('Price per slot is required');
+            return;
+        }
         try {
             const sport: SportType =
                 newCourt.sport === 'Padel' ? 'PADEL' : 'PICKELBALL';
@@ -465,12 +533,27 @@ const Settings = () => {
                 'Indoor Wood': 'CUSHIONED_ACRYLIC',
                 'Outdoor Concrete': 'CONCRETE',
             };
+            // Auto-generate time slots from venue operating hours (one slot per open day)
+            const timeSlots = hours
+                .map((h, i) =>
+                    h.isOpen
+                        ? {
+                              dayOfWeek: i,
+                              startTime: h.openTime,
+                              endTime: h.closeTime,
+                          }
+                        : null,
+                )
+                .filter(Boolean) as CreateCourtTimeSlotPayload[];
+
             await createCourt({
                 name: newCourt.name,
                 sport,
                 environment,
                 surface:
                     surfaceMap[newCourt.surfaceMaterial] ?? 'ARTIFICIAL_GRASS',
+                timeSlots,
+                pricing: { pricePerSlot: newCourt.pricePerSlot },
             });
             setShowAddForm(false);
             setNewCourt({
@@ -480,6 +563,7 @@ const Settings = () => {
                 lighting: 'LED Floodlights',
                 roofed: false,
                 isActive: true,
+                pricePerSlot: 0,
             });
             toast.success('Court added');
             fetchCourts();
@@ -519,21 +603,28 @@ const Settings = () => {
 
     // ── Facility / Amenities ──────────────────────────────────────────────────
     const toggleAmenity = async (amenityName: string) => {
+        const isCurrentlyActive = facility.amenities.includes(amenityName);
         const existing = amenities.find((a) => a.name === amenityName);
-        if (!existing) return;
-        // Optimistic toggle in UI
+
+        // Optimistic UI update
         setFacility((prev) => ({
             ...prev,
-            amenities: prev.amenities.includes(amenityName)
+            amenities: isCurrentlyActive
                 ? prev.amenities.filter((a) => a !== amenityName)
                 : [...prev.amenities, amenityName],
         }));
+
         try {
-            if (facility.amenities.includes(amenityName)) {
+            if (isCurrentlyActive && existing) {
+                // Deselect → delete the DB record
                 await deleteAmenity(existing.id);
-            } else {
-                await updateAmenity(existing.id, { name: amenityName });
+                setAmenities((prev) => prev.filter((a) => a.id !== existing.id));
+            } else if (!isCurrentlyActive && !existing) {
+                // Select → create a new DB record
+                const res = await createAmenity({ name: amenityName });
+                setAmenities((prev) => [...prev, res.data.amenity]);
             }
+            // If existing + not active → already exists, nothing to do
         } catch {
             toast.error('Failed to update amenity');
             fetchAmenities(); // Revert on error
@@ -543,9 +634,8 @@ const Settings = () => {
     const saveFacility = async () => {
         setSavingFacility(true);
         try {
-            if (bookingPolicy) {
-                await updateBookingPolicy({});
-            }
+            // Amenity toggles are saved individually on tap.
+            // Future: save venue bio via a dedicated endpoint.
             toast.success('Facility info saved');
         } catch {
             toast.error('Failed to save facility info');

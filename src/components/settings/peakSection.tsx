@@ -50,7 +50,7 @@ const PeakSection = ({
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <Label className="text-xs">
-                                    Off-Peak (AED/hr)
+                                    Off-Peak (₹/slot)
                                 </Label>
                                 <Input
                                     type="number"
@@ -65,7 +65,7 @@ const PeakSection = ({
                                 />
                             </div>
                             <div>
-                                <Label className="text-xs">Peak (AED/hr)</Label>
+                                <Label className="text-xs">Peak (₹/slot)</Label>
                                 <Input
                                     type="number"
                                     value={config.peakPrice}

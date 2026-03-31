@@ -46,6 +46,20 @@ const CourtForm = ({
                     </SelectContent>
                 </Select>
             </div>
+            <div>
+                <Label className="text-xs">Price per Slot (₹)</Label>
+                <Input
+                    type="number"
+                    min={0}
+                    value={data.pricePerSlot || ''}
+                    onChange={(e) =>
+                        onChange({
+                            pricePerSlot: parseFloat(e.target.value) || 0,
+                        })
+                    }
+                    placeholder="e.g. 500"
+                />
+            </div>
             <div className="grid grid-cols-2 gap-3">
                 <div>
                     <Label className="text-xs">Lighting</Label>

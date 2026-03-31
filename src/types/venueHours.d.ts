@@ -18,6 +18,15 @@ declare global {
         data: { venueHours: VenueHoursModel[] };
     }
 
+    // ─── Save (upsert) Venue Hours ────────────────────────────────────────────────
+
+    interface SaveVenueHourPayload {
+        dayOfWeek: number;
+        openTime: string;
+        closeTime: string;
+        isClosed: boolean;
+    }
+
     // ─── Update Venue Hours ───────────────────────────────────────────────────────
 
     interface UpdateVenueHoursPayload {

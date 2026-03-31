@@ -12,6 +12,15 @@ declare global {
         data: { amenities: AmenityModel[] };
     }
 
+    interface CreateAmenityPayload {
+        name: string;
+        icon?: string;
+    }
+
+    interface CreateAmenityResponse {
+        data: { amenity: AmenityModel };
+    }
+
     interface UpdateAmenityPayload {
         name?: string;
         icon?: string;

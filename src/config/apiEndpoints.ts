@@ -21,6 +21,7 @@ export const endpoints = {
 
     // amenities Endpoints
     listAmenities: '/amenities/list',
+    createAmenity: '/amenities/create',
     updateAmenities: (id: string) => `/amenities/${id}/update`,
     deleteAmenities: (id: string) => `/amenities/${id}/delete`,
 
@@ -40,6 +41,7 @@ export const endpoints = {
 
     // Peak hour pricing Endpoints
     listPeakHourPricing: '/peak-hour-pricing/list',
+    createPeakHourPricing: '/peak-hour-pricing/create',
     updatePeakHourPricing: (id: string) => `/peak-hour-pricing/${id}/update`,
     deletePeakHourPricing: (id: string) => `/peak-hour-pricing/${id}/delete`,
 
@@ -50,6 +52,7 @@ export const endpoints = {
 
     // Venue hours endpoints
     listVenueHours: '/venue-hours/list',
+    saveVenueHour: '/venue-hours/save',
     updateVenueHours: (id: string) => `/venue-hours/${id}/update`,
     deleteVenueHours: (id: string) => `/venue-hours/${id}/delete`,
 

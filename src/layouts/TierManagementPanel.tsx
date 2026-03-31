@@ -228,7 +228,7 @@ const TierManagementPanel = ({
                                     {tier.label}
                                 </p>
                                 <p className="text-sm font-bold text-foreground mt-0.5">
-                                    AED {(tier.revenue / 1000).toFixed(1)}k
+                                    ₹{(tier.revenue / 1000).toFixed(1)}k
                                 </p>
                                 <p className="text-[10px] text-muted-foreground">
                                     {tier.playerCount} players
@@ -286,7 +286,7 @@ const TierManagementPanel = ({
                                 </div>
                                 <div className="rounded-lg border p-3 text-center">
                                     <p className="text-lg font-bold text-foreground">
-                                        AED{' '}
+                                        {'₹'}{' '}
                                         {(selectedTier.revenue / 1000).toFixed(
                                             1,
                                         )}
@@ -327,7 +327,7 @@ const TierManagementPanel = ({
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
                                                 <span className="text-sm text-muted-foreground">
-                                                    Min Spend (AED)
+                                                    Min Spend (₹)
                                                 </span>
                                                 <input
                                                     type="number"
@@ -377,7 +377,7 @@ const TierManagementPanel = ({
                                                     Min Spend
                                                 </span>
                                                 <span className="text-sm font-semibold text-foreground">
-                                                    AED{' '}
+                                                    {'₹'}{' '}
                                                     {/* {(
                                                         tierConfigs?.find(
                                                             (c) =>

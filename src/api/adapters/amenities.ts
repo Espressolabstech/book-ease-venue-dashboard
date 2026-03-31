@@ -8,6 +8,16 @@ export const listAmenities = async (): Promise<ListAmenitiesResponse> => {
     });
 };
 
+export const createAmenity = async (
+    payload: CreateAmenityPayload,
+): Promise<CreateAmenityResponse> => {
+    return apiClient({
+        url: endpoints.createAmenity,
+        method: 'POST',
+        data: payload,
+    });
+};
+
 export const updateAmenity = async (
     id: string,
     payload: UpdateAmenityPayload,

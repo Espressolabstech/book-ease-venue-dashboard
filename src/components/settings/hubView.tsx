@@ -47,7 +47,7 @@ const HubView = ({
                         subtitle={peakConfigs
                             .map(
                                 (c) =>
-                                    `${c.sport}: AED ${c.offPeakPrice}–${c.peakPrice}/hr`,
+                                    `${c.sport}: ₹${c.offPeakPrice}–₹${c.peakPrice}/slot`,
                             )
                             .join(' · ')}
                         onClick={() => onNavigate('peak')}
