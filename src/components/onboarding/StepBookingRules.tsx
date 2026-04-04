@@ -17,6 +17,8 @@ const StepBookingRules = ({
     onSaveComplete,
     triggerExit,
     onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepBookingRulesProps) => {
     const [advanceDays, setAdvanceDays] = useState(7);
     const [minNotice, setMinNotice] = useState(1);
@@ -105,6 +107,15 @@ const StepBookingRules = ({
             onExitComplete();
         })();
     }, [triggerExit]); // eslint-disable-line
+
+    // Save draft & go Back
+    useEffect(() => {
+        if (!triggerBack) return;
+        (async () => {
+            await autoSave();
+            onBackComplete();
+        })();
+    }, [triggerBack]); // eslint-disable-line
 
     if (!loaded) return null;
 

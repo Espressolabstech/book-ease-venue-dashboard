@@ -1,17 +1,39 @@
 import { useEffect, useState } from 'react';
-import { DEFAULT_HOURS, PADEL_SURFACES, PICKLEBALL_SURFACES } from '../../utils/court';
+import {
+    DEFAULT_HOURS,
+    PADEL_SURFACES,
+    PICKLEBALL_SURFACES,
+} from '../../utils/court';
 import type { DaySchedule } from './ScheduleBuilder';
 import { toast } from 'sonner';
-import { getCourtImageUploadUrls, uploadToPresignedUrl } from '../../api/adapters/onBoard';
+import {
+    getCourtImageUploadUrls,
+    uploadToPresignedUrl,
+} from '../../api/adapters/onBoard';
 import { Loader2, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../ui/dialog';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { cn } from '../../utils/twMerge';
 import ScheduleBuilder from './ScheduleBuilder';
 import { Switch } from '../ui/switch';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 const StepCourtSetup = ({
     venueId,
@@ -21,6 +43,8 @@ const StepCourtSetup = ({
     onSaveComplete,
     triggerExit,
     onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepCourtSetupProps) => {
     const [courts, setCourts] = useState<Court[]>([]);
     const [loaded, setLoaded] = useState(false);
@@ -235,12 +259,21 @@ const StepCourtSetup = ({
         try {
             const res = await getCourtImageUploadUrls({
                 venueId,
-                images: [{ type: 'PHOTO', mimetype: file.type || 'image/jpeg' }],
+                images: [
+                    { type: 'PHOTO', mimetype: file.type || 'image/jpeg' },
+                ],
             });
-            const item = (res.data as any).images?.[0] ?? (Array.isArray(res.data) ? res.data[0] : res.data);
-            if (!item?.uploadUrl) throw new Error('Invalid upload URL response');
+            const item =
+                (res.data as any).images?.[0] ??
+                (Array.isArray(res.data) ? res.data[0] : res.data);
+            if (!item?.uploadUrl)
+                throw new Error('Invalid upload URL response');
             const { uploadUrl, publicUrl } = item;
-            await uploadToPresignedUrl(uploadUrl, file, file.type || 'image/jpeg');
+            await uploadToPresignedUrl(
+                uploadUrl,
+                file,
+                file.type || 'image/jpeg',
+            );
             setForm((f) => ({ ...f, photo_url: publicUrl }));
         } catch (err: any) {
             toast.error(err?.message || 'Photo upload failed');
@@ -284,6 +317,13 @@ const StepCourtSetup = ({
         if (!triggerExit) return;
         onExitComplete();
     }, [triggerExit]); // eslint-disable-line
+
+    // Save draft & go Back
+    useEffect(() => {
+        if (!triggerBack) return;
+        sessionStorage.setItem('onboarding_step3', JSON.stringify(courts));
+        onBackComplete();
+    }, [triggerBack]); // eslint-disable-line
 
     if (!loaded) return null;
 

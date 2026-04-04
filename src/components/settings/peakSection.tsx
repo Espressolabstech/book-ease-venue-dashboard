@@ -5,6 +5,17 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { weekdays } from '../../utils/settings';
 
+// Group slots that share the same start/end time into one visual card
+function groupSlotsByTime(slots: PeakHourSlot[]): PeakHourSlot[][] {
+    const map = new Map<string, PeakHourSlot[]>();
+    for (const slot of slots) {
+        const key = `${slot.startTime}-${slot.endTime}`;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(slot);
+    }
+    return Array.from(map.values());
+}
+
 const PeakSection = ({
     peakConfigs,
     addSlot,
@@ -104,84 +115,94 @@ const PeakSection = ({
                             )}
 
                             <div className="space-y-2">
-                                {config.slots.map((slot) => (
-                                    <div
-                                        key={slot.id}
-                                        className="space-y-2 rounded-lg border border-border p-3"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex flex-1 items-center gap-1.5">
-                                                <Input
-                                                    type="time"
-                                                    value={slot.startTime}
-                                                    onChange={(e) =>
-                                                        updateSlot(
-                                                            config.sport,
-                                                            slot.id,
-                                                            {
-                                                                startTime:
-                                                                    e.target
-                                                                        .value,
-                                                            },
-                                                        )
-                                                    }
-                                                    className="h-8 text-xs"
-                                                />
-                                                <span className="text-xs text-muted-foreground">
-                                                    to
-                                                </span>
-                                                <Input
-                                                    type="time"
-                                                    value={slot.endTime}
-                                                    onChange={(e) =>
-                                                        updateSlot(
-                                                            config.sport,
-                                                            slot.id,
-                                                            {
-                                                                endTime:
-                                                                    e.target
-                                                                        .value,
-                                                            },
-                                                        )
-                                                    }
-                                                    className="h-8 text-xs"
-                                                />
-                                            </div>
-                                            <button
-                                                onClick={() =>
-                                                    removeSlot(
-                                                        config.sport,
-                                                        slot.id,
-                                                    )
-                                                }
-                                                className="rounded p-1.5 hover:bg-destructive/10"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                            </button>
-                                        </div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {weekdays.map((day) => (
+                                {groupSlotsByTime(config.slots).map((group) => {
+                                    const representative = group[0];
+                                    const activeDays = new Set(
+                                        group.flatMap((s) => s.days),
+                                    );
+                                    const groupKey = `${representative.startTime}-${representative.endTime}`;
+                                    return (
+                                        <div
+                                            key={groupKey}
+                                            className="space-y-2 rounded-lg border border-border p-3"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex flex-1 items-center gap-1.5">
+                                                    <Input
+                                                        type="time"
+                                                        value={representative.startTime}
+                                                        onChange={(e) =>
+                                                            group.forEach((s) =>
+                                                                updateSlot(
+                                                                    config.sport,
+                                                                    s.id,
+                                                                    { startTime: e.target.value },
+                                                                )
+                                                            )
+                                                        }
+                                                        className="h-8 text-xs"
+                                                    />
+                                                    <span className="text-xs text-muted-foreground">
+                                                        to
+                                                    </span>
+                                                    <Input
+                                                        type="time"
+                                                        value={representative.endTime}
+                                                        onChange={(e) =>
+                                                            group.forEach((s) =>
+                                                                updateSlot(
+                                                                    config.sport,
+                                                                    s.id,
+                                                                    { endTime: e.target.value },
+                                                                )
+                                                            )
+                                                        }
+                                                        className="h-8 text-xs"
+                                                    />
+                                                </div>
                                                 <button
-                                                    key={day}
                                                     onClick={() =>
-                                                        toggleDay(
-                                                            config.sport,
-                                                            slot.id,
-                                                            day,
+                                                        group.forEach((s) =>
+                                                            removeSlot(config.sport, s.id)
                                                         )
                                                     }
-                                                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                                                        slot.days.includes(day)
-                                                            ? 'bg-primary text-primary-foreground'
-                                                            : 'bg-muted text-muted-foreground hover:bg-accent'
-                                                    }`}
+                                                    className="rounded p-1.5 hover:bg-destructive/10"
                                                 >
-                                                    {day}
+                                                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                                 </button>
-                                            ))}
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {weekdays.map((day) => {
+                                                    const isActive = activeDays.has(day);
+                                                    return (
+                                                        <button
+                                                            key={day}
+                                                            onClick={() => {
+                                                                if (isActive) {
+                                                                    // Find the slot that owns this day and toggle it off
+                                                                    const owner = group.find((s) =>
+                                                                        s.days.includes(day),
+                                                                    );
+                                                                    if (owner) toggleDay(config.sport, owner.id, day);
+                                                                } else {
+                                                                    // Add the day to the first slot in the group
+                                                                    toggleDay(config.sport, representative.id, day);
+                                                                }
+                                                            }}
+                                                            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                                                isActive
+                                                                    ? 'bg-primary text-primary-foreground'
+                                                                    : 'bg-muted text-muted-foreground hover:bg-accent'
+                                                            }`}
+                                                        >
+                                                            {day}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     </CardContent>

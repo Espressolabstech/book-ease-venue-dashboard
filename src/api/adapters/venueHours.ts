@@ -24,16 +24,7 @@ export const updateVenueHours = async (
 ): Promise<UpdateVenueHoursResponse> => {
     return apiClient({
         url: endpoints.updateVenueHours(id),
-        method: 'PATCH',
+        method: 'PUT',
         data: payload,
-    });
-};
-
-export const deleteVenueHours = async (
-    id: string,
-): Promise<DeleteVenueHoursResponse> => {
-    return apiClient({
-        url: endpoints.deleteVenueHours(id),
-        method: 'DELETE',
     });
 };

@@ -19,6 +19,7 @@ const OnBoardingLayout = ({
     children,
     onSaveAndContinue,
     onSaveAndExit,
+    onBack,
     isContinuing = false,
 }: OnboardingShellProps) => {
     const navigate = useNavigate();
@@ -213,10 +214,7 @@ const OnBoardingLayout = ({
                         </Button>
                         <div className="flex items-center gap-3 ml-auto">
                             {currentStep > 1 && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => goToStep(currentStep - 1)}
-                                >
+                                <Button variant="outline" onClick={onBack}>
                                     Back
                                 </Button>
                             )}

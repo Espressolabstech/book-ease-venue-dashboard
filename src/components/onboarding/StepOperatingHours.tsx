@@ -11,6 +11,8 @@ const StepOperatingHours = ({
     onSaveComplete,
     triggerExit,
     onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepOperatingHoursProps) => {
     const [schedule, setSchedule] = useState<DaySchedule[]>(DEFAULT_SCHEDULE);
     const [loaded, setLoaded] = useState(false);
@@ -124,6 +126,13 @@ const StepOperatingHours = ({
             onExitComplete();
         })();
     }, [triggerExit]); // eslint-disable-line
+
+    // Save draft & go Back
+    useEffect(() => {
+        if (!triggerBack) return;
+        sessionStorage.setItem('onboarding_step2', JSON.stringify(schedule));
+        onBackComplete();
+    }, [triggerBack]); // eslint-disable-line
 
     if (!loaded) return null;
 

@@ -1,8 +1,10 @@
-import { Check, Loader2, Save } from 'lucide-react';
-import { allAmenities } from '../../utils/settings';
+import { Loader2, Save } from 'lucide-react';
+import { AMENITY_GROUPS } from '../../utils/settings';
 import { Card, CardContent } from '../ui/card';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
+import { Label } from '../ui/label';
+import { cn } from '../../utils/twMerge';
 
 const FacilitySection = ({
     facility,
@@ -30,44 +32,60 @@ const FacilitySection = ({
                     </p>
                     <Textarea
                         value={facility.bio}
-                        onChange={(e) => onBioChange(e.target.value)}
+                        onChange={(e) =>
+                            onBioChange(e.target.value.slice(0, 300))
+                        }
                         placeholder="Tell players about your facility..."
                         rows={4}
                     />
+                    <p
+                        className={cn(
+                            'text-xs text-right',
+                            facility.bio.length >= 290
+                                ? 'text-destructive'
+                                : 'text-muted-foreground',
+                        )}
+                    >
+                        {facility.bio.length} / 300
+                    </p>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-4 space-y-4">
                     <h3 className="font-semibold text-foreground">Amenities</h3>
                     <p className="text-sm text-muted-foreground">
                         Select what's available at your venue.
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {allAmenities.map((amenity) => {
-                            const active = facility.amenities.includes(amenity);
-                            return (
-                                <button
-                                    key={amenity}
-                                    onClick={() => onToggleAmenity(amenity)}
-                                    className={`flex items-center gap-2 rounded-lg border p-2.5 text-sm transition-colors text-left ${
-                                        active
-                                            ? 'border-primary/40 bg-primary/5 text-foreground'
-                                            : 'border-border bg-card text-muted-foreground hover:bg-accent/40'
-                                    }`}
-                                >
-                                    <div
-                                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${active ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}
-                                    >
-                                        {active && (
-                                            <Check className="h-3 w-3" />
-                                        )}
-                                    </div>
-                                    <span className="text-sm">{amenity}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                    {AMENITY_GROUPS.map((group) => (
+                        <div key={group.label} className="space-y-2">
+                            <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                                {group.label}
+                            </Label>
+                            <div className="flex flex-wrap gap-2">
+                                {group.items.map((amenity) => {
+                                    const active =
+                                        facility.amenities.includes(amenity);
+                                    return (
+                                        <button
+                                            key={amenity}
+                                            onClick={() =>
+                                                onToggleAmenity(amenity)
+                                            }
+                                            className={cn(
+                                                'rounded-full border px-4 py-1.5 text-sm font-medium transition-all',
+                                                active
+                                                    ? 'border-[hsl(var(--admin-navy))] bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] scale-105'
+                                                    : 'border-border text-foreground hover:border-muted-foreground',
+                                            )}
+                                        >
+                                            {amenity}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ))}
                 </CardContent>
             </Card>
 

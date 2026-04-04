@@ -23,6 +23,7 @@ const OnBoarding = () => {
     const [saved, setSaved] = useState(false);
     const [triggerSave, setTriggerSave] = useState(false);
     const [triggerExit, setTriggerExit] = useState(false);
+    const [triggerBack, setTriggerBack] = useState(false);
     const [isContinuing, setIsContinuing] = useState(false);
 
     const venue = null;
@@ -56,6 +57,17 @@ const OnBoarding = () => {
         setTriggerExit(false);
     };
 
+    const handleBack = () => {
+        if (currentStep > 1) setTriggerBack(true);
+    };
+
+    const handleBackComplete = () => {
+        setTriggerBack(false);
+        if (currentStep > 1) {
+            navigate(`/onboarding/${venueId}/${token}/step/${currentStep - 1}`);
+        }
+    };
+
     const stepProps = {
         venueId: venueId!,
         venue,
@@ -66,6 +78,8 @@ const OnBoarding = () => {
         onSaveComplete: handleSaveComplete,
         triggerExit,
         onExitComplete: handleExitComplete,
+        triggerBack,
+        onBackComplete: handleBackComplete,
     };
 
     const renderStep = () => {
@@ -102,6 +116,7 @@ const OnBoarding = () => {
             saved={saved}
             onSaveAndContinue={handleSaveAndContinue}
             onSaveAndExit={handleSaveAndExit}
+            onBack={handleBack}
             isContinuing={isContinuing}
         >
             {renderStep()}

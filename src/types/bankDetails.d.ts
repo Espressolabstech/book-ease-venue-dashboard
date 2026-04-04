@@ -1,6 +1,5 @@
 declare global {
     type BankAccountStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
-    type PayOutSchedule = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
 
     interface BankDetailsModel {
         id: string;
@@ -10,7 +9,6 @@ declare global {
         ifscCode: string;
         accountHolderName: string;
         status: BankAccountStatus;
-        payOutSchedule: PayOutSchedule;
         isDeleted: boolean;
         createdAt: string;
         updatedAt: string;
@@ -25,7 +23,6 @@ declare global {
         accountNumber?: string;
         ifscCode?: string;
         accountHolderName?: string;
-        payOutSchedule?: PayOutSchedule;
     }
 
     interface UpdateBankDetailsResponse {

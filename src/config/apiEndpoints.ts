@@ -11,6 +11,7 @@ export const endpoints = {
     venueOnboard: '/onboard/venue',
     isOnBoarded: '/onboard/venue/is-onboarded',
     getOnBoardedVenueDetails: '/onboard/venue/details',
+    updateVenueDescription: '/venue/update-description',
 
     // courts Endpoints
     getCourts: '/courts/list',

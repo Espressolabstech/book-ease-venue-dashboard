@@ -25,10 +25,7 @@ import {
     updateCourt,
     deleteCourt as deleteCourtApi,
 } from '../../api/adapters/courts';
-import {
-    listVenueHours,
-    saveVenueHour,
-} from '../../api/adapters/venueHours';
+import { listVenueHours, saveVenueHour } from '../../api/adapters/venueHours';
 import {
     listPeakHourPricings,
     createPeakHourPricing,
@@ -41,6 +38,10 @@ import {
     createAmenity,
     deleteAmenity,
 } from '../../api/adapters/amenities';
+import {
+    getOnBoardedVenueDetails,
+    updateVenueDescription,
+} from '../../api/adapters/onBoard';
 
 // ── Day index helpers ─────────────────────────────────────────────────────────
 const DAY_NAMES = [
@@ -227,12 +228,17 @@ const Settings = () => {
 
     const fetchAmenities = useCallback(async () => {
         try {
-            const res = await listAmenities();
-            setAmenities(res.data.amenities);
-            setFacility((prev) => ({
-                ...prev,
-                amenities: res.data.amenities.map((a: AmenityModel) => a.name),
-            }));
+            const [amenitiesRes, venueRes] = await Promise.all([
+                listAmenities(),
+                getOnBoardedVenueDetails(),
+            ]);
+            setAmenities(amenitiesRes.data.amenities);
+            setFacility({
+                bio: venueRes.data.venue.description ?? '',
+                amenities: amenitiesRes.data.amenities.map(
+                    (a: AmenityModel) => a.name,
+                ),
+            });
         } catch {
             toast.error('Failed to load amenities');
         }
@@ -618,7 +624,9 @@ const Settings = () => {
             if (isCurrentlyActive && existing) {
                 // Deselect → delete the DB record
                 await deleteAmenity(existing.id);
-                setAmenities((prev) => prev.filter((a) => a.id !== existing.id));
+                setAmenities((prev) =>
+                    prev.filter((a) => a.id !== existing.id),
+                );
             } else if (!isCurrentlyActive && !existing) {
                 // Select → create a new DB record
                 const res = await createAmenity({ name: amenityName });
@@ -635,7 +643,7 @@ const Settings = () => {
         setSavingFacility(true);
         try {
             // Amenity toggles are saved individually on tap.
-            // Future: save venue bio via a dedicated endpoint.
+            await updateVenueDescription(facility.bio);
             toast.success('Facility info saved');
         } catch {
             toast.error('Failed to save facility info');

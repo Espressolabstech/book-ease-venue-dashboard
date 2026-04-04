@@ -14,6 +14,8 @@ const StepAmenities = ({
     onSaveComplete,
     triggerExit,
     onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepAmenitiesProps) => {
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [customAmenities, setCustomAmenities] = useState<string[]>([]);
@@ -74,7 +76,9 @@ const StepAmenities = ({
 
         const amenities: { name: string; is_custom: boolean }[] = [];
         selected.forEach((name) => amenities.push({ name, is_custom: false }));
-        customAmenities.forEach((name) => amenities.push({ name, is_custom: true }));
+        customAmenities.forEach((name) =>
+            amenities.push({ name, is_custom: true }),
+        );
 
         sessionStorage.setItem('onboarding_step4', JSON.stringify(amenities));
         onSaving(false);
@@ -86,6 +90,15 @@ const StepAmenities = ({
     useEffect(() => {
         if (!triggerSave) return;
         (async () => {
+            const totalSelected = selected.size + customAmenities.length;
+            if (totalSelected === 0) {
+                toast.error(
+                    'Please select at least one amenity before continuing.',
+                );
+                onSaveComplete(false);
+                return;
+            }
+
             const saved = await saveAmenities();
             if (saved === false) {
                 onSaveComplete(false);
@@ -109,6 +122,15 @@ const StepAmenities = ({
             onExitComplete();
         })();
     }, [triggerExit]); // eslint-disable-line
+
+    // Save draft & go Back
+    useEffect(() => {
+        if (!triggerBack) return;
+        (async () => {
+            await saveAmenities();
+            onBackComplete();
+        })();
+    }, [triggerBack]); // eslint-disable-line
 
     if (!loaded) return null;
 

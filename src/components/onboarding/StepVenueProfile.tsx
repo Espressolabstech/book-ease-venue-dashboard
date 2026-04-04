@@ -213,6 +213,8 @@ const StepVenueProfile = ({
     onSaveComplete,
     triggerExit,
     // onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepVenueProfileProps) => {
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
@@ -355,6 +357,30 @@ const StepVenueProfile = ({
         (async () => {})();
     }, [triggerExit]); // eslint-disable-line
 
+    useEffect(() => {
+        if (!triggerBack) return;
+        sessionStorage.setItem(
+            'onboarding_step1',
+            JSON.stringify({
+                venueName: name,
+                venueAddress: address,
+                city,
+                state,
+                country,
+                pincode,
+                description,
+                venuemail: contactEmail,
+                venuePhone: whatsapp,
+                latitude,
+                longitude,
+                logoUrl,
+                coverUrl,
+                galleryUrls,
+            }),
+        );
+        onBackComplete();
+    }, [triggerBack]); // eslint-disable-line
+
     const handleFileSelect = (
         e: React.ChangeEvent<HTMLInputElement>,
         target: 'logo' | 'cover',
@@ -387,7 +413,9 @@ const StepVenueProfile = ({
         try {
             const res = await getVenueImageUploadUrls({
                 venueId,
-                images: [{ type: isLogo ? 'LOGO' : 'COVER', mimetype: 'image/jpeg' }],
+                images: [
+                    { type: isLogo ? 'LOGO' : 'COVER', mimetype: 'image/jpeg' },
+                ],
             });
             const images = Array.isArray(res.data) ? res.data : res.data.images;
             const { uploadUrl, publicUrl } = images[0];
@@ -422,11 +450,22 @@ const StepVenueProfile = ({
             try {
                 const res = await getVenueImageUploadUrls({
                     venueId,
-                    images: [{ type: 'GALLERY', mimetype: file.type || 'image/jpeg' }],
+                    images: [
+                        {
+                            type: 'GALLERY',
+                            mimetype: file.type || 'image/jpeg',
+                        },
+                    ],
                 });
-                const images = Array.isArray(res.data) ? res.data : res.data.images;
+                const images = Array.isArray(res.data)
+                    ? res.data
+                    : res.data.images;
                 const { uploadUrl, publicUrl } = images[0];
-                await uploadToPresignedUrl(uploadUrl, file, file.type || 'image/jpeg');
+                await uploadToPresignedUrl(
+                    uploadUrl,
+                    file,
+                    file.type || 'image/jpeg',
+                );
                 setGalleryUrls((prev) => [...prev, publicUrl]);
             } catch (err: any) {
                 toast.error(`Failed to upload "${file.name}"`);
@@ -581,11 +620,10 @@ const StepVenueProfile = ({
                     placeholder="Describe your venue — facilities, vibe, what makes it special."
                     value={description}
                     onChange={(e) => {
-                        if (e.target.value.length <= 300) {
-                            setDescription(e.target.value);
-                            clearError('description');
-                            debouncedSave('description', e.target.value);
-                        }
+                        const val = e.target.value.slice(0, 300);
+                        setDescription(val);
+                        clearError('description');
+                        debouncedSave('description', val);
                     }}
                     onBlur={() => {
                         if (description) autoSave('description', description);

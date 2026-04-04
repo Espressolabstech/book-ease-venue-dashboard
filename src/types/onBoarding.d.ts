@@ -12,6 +12,7 @@ declare global {
         children: React.ReactNode;
         onSaveAndContinue?: () => void;
         onSaveAndExit?: () => void;
+        onBack?: () => void;
         isContinuing?: boolean;
     }
 
@@ -25,6 +26,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     interface StepOperatingHoursProps {
@@ -37,6 +40,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     interface StepCourtSetupProps {
@@ -49,6 +54,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     interface Court {
@@ -73,6 +80,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     interface StepPricingProps {
@@ -85,8 +94,37 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
+    interface PeakPricingSlot {
+        id: string;
+        start: string;
+        end: string;
+        rate: string;
+        days: string[]; // SHORT_DAYS: 'Mon'|'Tue'|'Wed'|'Thu'|'Fri'|'Sat'|'Sun'
+    }
+
+    /** One entry per sport (e.g. "Padel", "Pickleball").
+     *  All courts of the same sport share the same pricing config. */
+    interface SportPricing {
+        sport: string;
+        base_rate: string;
+        booking_durations: number[];
+        // Weekday peak slots (multiple morning/evening windows)
+        peak_enabled: boolean;
+        peak_slots: PeakPricingSlot[];
+        // Weekend flat rate
+        weekend_rate_enabled: boolean;
+        weekend_days: string[]; // full day names: 'Saturday', 'Sunday'
+        weekend_rate: string;
+        // Weekend peak pricing (optional extra on top of weekend rate)
+        weekend_peak_enabled: boolean;
+        weekend_peak_slots: PeakPricingSlot[];
+    }
+
+    /** Kept for backwards compat - step5 is now Record<sport, SportPricing> */
     interface CourtPricing {
         court_id: string;
         base_rate: string;
@@ -110,6 +148,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     interface StepPayoutDetailsProps {
@@ -122,6 +162,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     interface StepReviewProps {
@@ -134,6 +176,8 @@ declare global {
         onSaveComplete: (success: boolean) => void;
         triggerExit: boolean;
         onExitComplete: () => void;
+        triggerBack: boolean;
+        onBackComplete: () => void;
     }
 
     type InvitationStatus = 'loading' | 'invalid' | 'expired' | 'valid';
@@ -257,7 +301,6 @@ declare global {
         accountNumber: string;
         ifscCode: string;
         accountHolderName: string;
-        payOutSchedule?: string;
     }
 
     interface GetOnBoardedVenueDetailsResponse {
@@ -272,6 +315,7 @@ declare global {
                 state: string;
                 country: string;
                 pincode: string;
+                description?: string;
             };
         };
     }

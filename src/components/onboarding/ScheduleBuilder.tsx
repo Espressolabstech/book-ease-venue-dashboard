@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react';
-import { Switch } from '@radix-ui/react-switch';
+import { Switch } from '../ui/switch';
 import { cn } from '../../utils/twMerge';
 import { Button } from '../ui/button';
 import {
@@ -136,11 +136,7 @@ export default function ScheduleBuilder({
         <div className="space-y-4">
             {showShortcuts && (
                 <div className="flex flex-wrap gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={applyToAll}
-                    >
+                    <Button variant="outline" size="sm" onClick={applyToAll}>
                         Apply to All Days
                     </Button>
                     <Button

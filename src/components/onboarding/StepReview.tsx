@@ -16,6 +16,8 @@ const StepReview = ({
     onSaveComplete,
     triggerExit,
     onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepReviewProps) => {
     const navigate = useNavigate();
     const { token: urlToken } = useParams<{ token: string }>();
@@ -98,8 +100,20 @@ const StepReview = ({
         };
 
         // ── Courts ────────────────────────────────────────────────────
-        const courts = step3.map((court: any, i: number) => {
-            const pricing = step5[String(i)];
+        // step5 is now keyed by sport name (SportPricing), not court index
+        const SHORT_TO_DAY_INT: Record<string, number> = {
+            Sun: 0,
+            Mon: 1,
+            Tue: 2,
+            Wed: 3,
+            Thu: 4,
+            Fri: 5,
+            Sat: 6,
+        };
+
+        const courts = step3.map((court: any) => {
+            // Look up pricing by sport (new format), fall back to legacy index
+            const sportPricing: any = step5[court.sport] ?? null;
 
             // Use custom hours when set, otherwise fall back to venue open hours
             const timeSlots =
@@ -117,11 +131,72 @@ const StepReview = ({
                           endTime: h.closeTime,
                       }));
 
-            const weekendDaysInt = pricing?.weekend_rate_enabled
-                ? (pricing.weekend_days as string[]).map(
-                      (d) => DAY_TO_INT[d] ?? parseInt(d),
+            const weekendDaysInt = sportPricing?.weekend_rate_enabled
+                ? (sportPricing.weekend_days as string[]).map(
+                      (d: string) => DAY_TO_INT[d] ?? parseInt(d),
                   )
                 : undefined;
+
+            // Build peakHourPricings from the multi-slot arrays
+            const peakHourPricings: any[] = [];
+
+            if (
+                sportPricing?.peak_enabled &&
+                Array.isArray(sportPricing.peak_slots)
+            ) {
+                for (const slot of sportPricing.peak_slots) {
+                    if (!slot.rate) continue;
+                    if (slot.days && slot.days.length > 0) {
+                        // One entry per day
+                        for (const day of slot.days) {
+                            const dow = SHORT_TO_DAY_INT[day];
+                            if (dow === undefined) continue;
+                            peakHourPricings.push({
+                                dayOfWeek: dow,
+                                startTime: slot.start,
+                                endTime: slot.end,
+                                pricePerSlot: parseFloat(slot.rate) || 0,
+                            });
+                        }
+                    } else {
+                        peakHourPricings.push({
+                            startTime: slot.start,
+                            endTime: slot.end,
+                            pricePerSlot: parseFloat(slot.rate) || 0,
+                        });
+                    }
+                }
+            }
+
+            if (
+                sportPricing?.weekend_rate_enabled &&
+                sportPricing?.weekend_peak_enabled &&
+                Array.isArray(sportPricing.weekend_peak_slots)
+            ) {
+                for (const slot of sportPricing.weekend_peak_slots) {
+                    if (!slot.rate) continue;
+                    if (slot.days && slot.days.length > 0) {
+                        for (const day of slot.days) {
+                            const dow = SHORT_TO_DAY_INT[day];
+                            if (dow === undefined) continue;
+                            peakHourPricings.push({
+                                dayOfWeek: dow,
+                                startTime: slot.start,
+                                endTime: slot.end,
+                                pricePerSlot: parseFloat(slot.rate) || 0,
+                                label: 'weekend_peak',
+                            });
+                        }
+                    } else {
+                        peakHourPricings.push({
+                            startTime: slot.start,
+                            endTime: slot.end,
+                            pricePerSlot: parseFloat(slot.rate) || 0,
+                            label: 'weekend_peak',
+                        });
+                    }
+                }
+            }
 
             const courtObj: any = {
                 name: court.name,
@@ -131,26 +206,18 @@ const StepReview = ({
                     SURFACE_MAP[court.surface_material] ??
                     court.surface_material,
                 timeSlots,
-                pricing: pricing
+                pricing: sportPricing
                     ? {
-                          pricePerSlot: parseFloat(pricing.base_rate) || 0,
-                          ...(pricing.weekend_rate_enabled && {
+                          pricePerSlot: parseFloat(sportPricing.base_rate) || 0,
+                          ...(sportPricing.weekend_rate_enabled && {
                               weekendPricePerSlot: parseFloat(
-                                  pricing.weekend_rate,
+                                  sportPricing.weekend_rate,
                               ),
                               weekendDays: weekendDaysInt,
                           }),
                       }
                     : undefined,
-                ...(pricing?.peak_enabled && {
-                    peakHourPricings: [
-                        {
-                            startTime: pricing.peak_time_start,
-                            endTime: pricing.peak_time_end,
-                            pricePerSlot: parseFloat(pricing.peak_rate) || 0,
-                        },
-                    ],
-                }),
+                ...(peakHourPricings.length > 0 && { peakHourPricings }),
             };
 
             // Only include images field if there is a photo (backend rejects empty array)
@@ -190,7 +257,6 @@ const StepReview = ({
             accountNumber: step7?.accountNumber || '',
             ifscCode: step7?.ifscCode || '',
             accountHolderName: step7?.holderName || '',
-            payOutSchedule: step7?.schedule?.toUpperCase(),
         };
     };
 
@@ -235,6 +301,12 @@ const StepReview = ({
         if (!triggerExit) return;
         onExitComplete();
     }, [triggerExit]); // eslint-disable-line
+
+    // Back from review — no data to persist, just navigate
+    useEffect(() => {
+        if (!triggerBack) return;
+        onBackComplete();
+    }, [triggerBack]); // eslint-disable-line
 
     const editStep = (step: number) =>
         navigate(`/onboarding/${venueId}/${urlToken}/step/${step}`);
@@ -471,36 +543,61 @@ const StepReview = ({
                     </p>
                 ) : (
                     <div className="space-y-4">
-                        {step3.map((c: any, i: number) => {
-                            const p = step5[String(i)];
+                        {/* Group courts by sport and show one pricing block per sport */}
+                        {Array.from(
+                            new Set(step3.map((c: any) => c.sport as string)),
+                        ).map((sport) => {
+                            const p: any = step5[sport];
+                            const courtCount = step3.filter(
+                                (c: any) => c.sport === sport,
+                            ).length;
                             return (
-                                <div key={i} className="space-y-1">
+                                <div key={sport} className="space-y-1">
                                     <p className="text-sm font-medium">
-                                        {c.name}
+                                        {sport}{' '}
+                                        <span className="text-xs font-normal text-muted-foreground">
+                                            ({courtCount} court
+                                            {courtCount !== 1 ? 's' : ''})
+                                        </span>
                                     </p>
                                     <div className="text-xs text-muted-foreground space-y-0.5">
                                         <p>
-                                            Base Rate: ₹{p?.base_rate || 0}/hr
+                                            Base Rate: ₹{p?.base_rate || 0}/slot
                                         </p>
-                                        <p>
-                                            Durations:{' '}
-                                            {(
-                                                (p?.booking_durations as number[]) || [
-                                                    60,
-                                                ]
-                                            )
-                                                .map((d: number) => `${d} min`)
-                                                .join(', ')}
-                                        </p>
-                                        {p?.peak_enabled && (
-                                            <p>
-                                                Peak: ₹{p.peak_rate}/hr (
-                                                {p.peak_time_start} –{' '}
-                                                {p.peak_time_end})
-                                            </p>
-                                        )}
+                                        {p?.peak_enabled &&
+                                            Array.isArray(p.peak_slots) &&
+                                            p.peak_slots.length > 0 && (
+                                                <p>
+                                                    Peak:{' '}
+                                                    {p.peak_slots
+                                                        .map(
+                                                            (s: any) =>
+                                                                `₹${s.rate}/slot (${s.start}–${s.end})`,
+                                                        )
+                                                        .join(', ')}
+                                                </p>
+                                            )}
                                         {p?.weekend_rate_enabled && (
-                                            <p>Weekend: ₹{p.weekend_rate}/hr</p>
+                                            <p>
+                                                Weekend: ₹{p.weekend_rate}/slot
+                                                {p?.weekend_peak_enabled &&
+                                                    Array.isArray(
+                                                        p.weekend_peak_slots,
+                                                    ) &&
+                                                    p.weekend_peak_slots
+                                                        .length > 0 && (
+                                                        <>
+                                                            {' '}
+                                                            · Peak:{' '}
+                                                            {p.weekend_peak_slots
+                                                                .map(
+                                                                    (s: any) =>
+                                                                        `₹${s.rate}/slot (${s.start}–${s.end})`,
+                                                                )
+                                                                .join(', ')}
+                                                        </>
+                                                    )}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -572,12 +669,6 @@ const StepReview = ({
                             <span className="text-muted-foreground">IFSC:</span>{' '}
                             {maskIfsc(step7.ifscCode || '')}
                         </p>
-                        <p>
-                            <span className="text-muted-foreground">
-                                Schedule:
-                            </span>{' '}
-                            {step7.schedule}
-                        </p>
                     </div>
                 )}
             </SectionCard>
@@ -643,7 +734,7 @@ const StepReview = ({
                         </p>
                         <p>
                             <strong>3. Payouts.</strong> Payouts are processed
-                            according to your selected schedule.
+                            according to the platform's payout schedule.
                         </p>
                         <p>
                             <strong>4. Cancellation.</strong> You must honour

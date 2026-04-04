@@ -1,10 +1,10 @@
-import { Shield } from "lucide-react";
-import { IFSC_REGEX, PAYOUT_SCHEDULES } from "../../utils/payOutDetails";
-import { cn } from "../../utils/twMerge";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { Shield } from 'lucide-react';
+import { IFSC_REGEX } from '../../utils/payOutDetails';
+import { cn } from '../../utils/twMerge';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const StepPayoutDetails = ({
     venueId,
@@ -14,13 +14,14 @@ const StepPayoutDetails = ({
     onSaveComplete,
     triggerExit,
     onExitComplete,
+    triggerBack,
+    onBackComplete,
 }: StepPayoutDetailsProps) => {
     const [bankName, setBankName] = useState('');
     const [holderName, setHolderName] = useState('');
     const [accountNumber, setAccountNumber] = useState('');
     const [confirmAccount, setConfirmAccount] = useState('');
     const [iban, setIban] = useState(''); // using iban field for IFSC
-    const [schedule, setSchedule] = useState('weekly');
     const [loaded, setLoaded] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -51,12 +52,11 @@ const StepPayoutDetails = ({
                 holderName,
                 accountNumber,
                 ifscCode: iban,
-                schedule,
             }),
         );
         onSaving(false);
         onSaved();
-    }, [venueId, bankName, holderName, accountNumber, iban, schedule, onSaving, onSaved]); // eslint-disable-line
+    }, [venueId, bankName, holderName, accountNumber, iban, onSaving, onSaved]); // eslint-disable-line
 
     const clearError = (field: string) =>
         setErrors((prev) => {
@@ -105,6 +105,15 @@ const StepPayoutDetails = ({
             onExitComplete();
         })();
     }, [triggerExit]); // eslint-disable-line
+
+    // Save draft & go Back
+    useEffect(() => {
+        if (!triggerBack) return;
+        (async () => {
+            await autoSave();
+            onBackComplete();
+        })();
+    }, [triggerBack]); // eslint-disable-line
 
     if (!loaded) return null;
 
@@ -241,34 +250,6 @@ const StepPayoutDetails = ({
                 {errors.ifsc && (
                     <p className="text-xs text-destructive">{errors.ifsc}</p>
                 )}
-            </div>
-
-            {/* Payout Schedule */}
-            <div className="space-y-3">
-                <Label>Preferred Payout Schedule</Label>
-                <div className="space-y-2">
-                    {PAYOUT_SCHEDULES.map((s) => (
-                        <label
-                            key={s.value}
-                            className="flex items-center gap-3 cursor-pointer"
-                        >
-                            <input
-                                type="radio"
-                                checked={schedule === s.value}
-                                onChange={() => {
-                                    setSchedule(s.value);
-                                    setTimeout(autoSave, 100);
-                                }}
-                                className="h-4 w-4 text-[hsl(var(--admin-navy))]"
-                            />
-                            <span className="text-sm">{s.label}</span>
-                        </label>
-                    ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                    This is your preference — the platform team will confirm
-                    your schedule after your venue goes live.
-                </p>
             </div>
         </div>
     );

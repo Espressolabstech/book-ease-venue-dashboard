@@ -1,3 +1,7 @@
+import { AMENITY_GROUPS } from './amenities';
+
+export { AMENITY_GROUPS };
+
 export const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const surfaceOptions: Record<string, string[]> = {
@@ -20,19 +24,4 @@ export const lightingOptions = [
     'Indoor Lighting',
     'Natural Light',
     'Halogen',
-];
-
-export const allAmenities = [
-    'Washrooms',
-    'Changing Rooms',
-    'Showers',
-    'Parking',
-    'Pro Shop',
-    'Café / Lounge',
-    'Equipment Rental',
-    'First Aid',
-    'WiFi',
-    'Lockers',
-    'Spectator Seating',
-    'Water Fountain',
 ];

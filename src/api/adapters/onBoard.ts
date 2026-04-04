@@ -53,3 +53,13 @@ export const getOnBoardedVenueDetails =
             method: 'GET',
         });
     };
+
+export const updateVenueDescription = async (
+    description: string,
+): Promise<{ data: { venue: { id: string; description: string } } }> => {
+    return apiClient({
+        url: endpoints.updateVenueDescription,
+        method: 'PATCH',
+        data: { description },
+    });
+};
