@@ -408,45 +408,48 @@ const Settings = () => {
                 Padel: 'PADEL',
                 Pickleball: 'PICKELBALL',
             };
-            // Find the first active court for each display-sport
-            const courtBySport: Record<string, string> = {};
+            // All courts grouped by display-sport
+            const courtsBySportDisplay: Record<string, string[]> = {};
             for (const c of courtsRaw) {
-                const displaySport =
-                    c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
-                if (!courtBySport[displaySport]) {
-                    courtBySport[displaySport] = c.id;
-                }
+                const displaySport = c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
+                if (!courtsBySportDisplay[displaySport]) courtsBySportDisplay[displaySport] = [];
+                courtsBySportDisplay[displaySport].push(c.id);
             }
 
             await Promise.all(
                 peakConfigs.flatMap((c) =>
-                    c.slots.map((s) => {
-                        const dayOfWeek =
-                            s.days.length === 1
-                                ? SHORT_DAYS.indexOf(s.days[0])
-                                : null;
+                    c.slots.flatMap((s) => {
                         const isNewSlot = /^p\d+$/.test(s.id);
                         if (isNewSlot) {
-                            const courtId = courtBySport[c.sport];
-                            if (!courtId) return Promise.resolve();
-                            return createPeakHourPricing({
-                                courtId,
-                                startTime: s.startTime,
-                                endTime: s.endTime,
-                                pricePerSlot: c.peakPrice,
-                                ...(dayOfWeek !== null && dayOfWeek >= 0
-                                    ? { dayOfWeek }
-                                    : {}),
+                            const courtIds = courtsBySportDisplay[c.sport] ?? [];
+                            // Create one record per court × per selected day
+                            return courtIds.flatMap((courtId) => {
+                                if (s.days.length === 0) {
+                                    return [createPeakHourPricing({
+                                        courtId,
+                                        startTime: s.startTime,
+                                        endTime: s.endTime,
+                                        pricePerSlot: c.peakPrice,
+                                    })];
+                                }
+                                return s.days.map((day) => {
+                                    const dayOfWeek = SHORT_DAYS.indexOf(day);
+                                    return createPeakHourPricing({
+                                        courtId,
+                                        startTime: s.startTime,
+                                        endTime: s.endTime,
+                                        pricePerSlot: c.peakPrice,
+                                        ...(dayOfWeek >= 0 ? { dayOfWeek } : {}),
+                                    });
+                                });
                             });
                         }
-                        return updatePeakHourPricing(s.id, {
+                        // Existing record — update time/price (day fixed per record)
+                        return [updatePeakHourPricing(s.id, {
                             startTime: s.startTime,
                             endTime: s.endTime,
                             pricePerSlot: c.peakPrice,
-                            ...(dayOfWeek !== null && dayOfWeek >= 0
-                                ? { dayOfWeek }
-                                : {}),
-                        });
+                        })];
                     }),
                 ),
             );
