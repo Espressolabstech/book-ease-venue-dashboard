@@ -8,6 +8,7 @@ import PeakSection from '../../components/settings/peakSection';
 import CourtsSection from '../../components/settings/courtSection';
 import DowntimeSection from '../../components/settings/downtimeSection';
 import FacilitySection from '../../components/settings/facilitySection';
+import BookingRulesSection from '../../components/settings/bookingRulesSection';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -42,6 +43,10 @@ import {
     getOnBoardedVenueDetails,
     updateVenueDescription,
 } from '../../api/adapters/onBoard';
+import {
+    getBookingPolicy,
+    updateBookingPolicy,
+} from '../../api/adapters/bookingPolicy';
 
 // ── Day index helpers ─────────────────────────────────────────────────────────
 const DAY_NAMES = [
@@ -114,6 +119,10 @@ const Settings = () => {
     const [savingHours, setSavingHours] = useState(false);
     const [savingPeak, setSavingPeak] = useState(false);
     const [savingFacility, setSavingFacility] = useState(false);
+    const [bookingPolicy, setBookingPolicy] = useState<BookingPolicyModel | null>(null);
+    const [loadingPolicy, setLoadingPolicy] = useState(false);
+    const [savingPolicy, setSavingPolicy] = useState(false);
+    const [policyDraft, setPolicyDraft] = useState<UpdateBookingPolicyPayload>({});
 
     // ── Local UI state ──
     const [downtimes] = useState<ScheduledDowntime[]>([]);
@@ -244,13 +253,41 @@ const Settings = () => {
         }
     }, []);
 
+    const fetchPolicy = useCallback(async () => {
+        setLoadingPolicy(true);
+        try {
+            const res = await getBookingPolicy();
+            setBookingPolicy(res.data.bookingPolicy);
+            setPolicyDraft({});
+        } catch {
+            toast.error('Failed to load booking rules');
+        } finally {
+            setLoadingPolicy(false);
+        }
+    }, []);
+
+    const savePolicy = async () => {
+        setSavingPolicy(true);
+        try {
+            const res = await updateBookingPolicy(policyDraft);
+            setBookingPolicy(res.data.bookingPolicy);
+            setPolicyDraft({});
+            toast.success('Booking rules saved');
+        } catch {
+            toast.error('Failed to save booking rules');
+        } finally {
+            setSavingPolicy(false);
+        }
+    };
+
     // ── Initial load ─────────────────────────────────────────────────────────────
 
     useEffect(() => {
         fetchCourts();
         fetchHours();
         fetchAmenities();
-    }, [fetchCourts, fetchHours, fetchAmenities]);
+        fetchPolicy();
+    }, [fetchCourts, fetchHours, fetchAmenities, fetchPolicy]);
 
     useEffect(() => {
         if (courtsRaw.length) fetchPeakHours();
@@ -263,6 +300,7 @@ const Settings = () => {
         courts: `${activeSport} Courts`,
         downtime: 'Scheduled Downtime',
         facility: 'Facility Info',
+        policy: 'Booking Rules',
     };
 
     const goBack = () => {
@@ -340,9 +378,9 @@ const Settings = () => {
                               ...c.slots,
                               {
                                   id: `p${Date.now()}`,
-                                  startTime: '17:00',
-                                  endTime: '22:00',
-                                  days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                                  startTime: '',
+                                  endTime: '',
+                                  days: [],
                               },
                           ],
                       }
@@ -418,7 +456,7 @@ const Settings = () => {
 
             await Promise.all(
                 peakConfigs.flatMap((c) =>
-                    c.slots.flatMap((s) => {
+                    c.slots.filter((s) => s.startTime && s.endTime).flatMap((s) => {
                         const isNewSlot = /^p\d+$/.test(s.id);
                         if (isNewSlot) {
                             const courtIds = courtsBySportDisplay[c.sport] ?? [];
@@ -764,6 +802,41 @@ const Settings = () => {
                         onToggleAmenity={toggleAmenity}
                         onSave={saveFacility}
                         saving={savingFacility}
+                    />
+                )}
+                {section === 'policy' && (
+                    <BookingRulesSection
+                        policy={
+                            bookingPolicy
+                                ? {
+                                      ...bookingPolicy,
+                                      ...(policyDraft.advanceBookingDays !== undefined && {
+                                          adavanceBookingDays: policyDraft.advanceBookingDays,
+                                      }),
+                                      ...(policyDraft.minimumNoticeMinutes !== undefined && {
+                                          minimumNoticeMinutes: policyDraft.minimumNoticeMinutes,
+                                      }),
+                                      ...(policyDraft.minimumSlotMinutes !== undefined && {
+                                          minimumSlotMinutes: policyDraft.minimumSlotMinutes,
+                                      }),
+                                      ...(policyDraft.cancellationPolicy !== undefined && {
+                                          cancellationPolicy: policyDraft.cancellationPolicy,
+                                      }),
+                                      ...(policyDraft.autoConfirm !== undefined && {
+                                          autoConfirm: policyDraft.autoConfirm,
+                                      }),
+                                      ...(policyDraft.maxBookingsPerPlayerDay !== undefined && {
+                                          maxBookingsPerPlayerDay: policyDraft.maxBookingsPerPlayerDay,
+                                      }),
+                                  }
+                                : null
+                        }
+                        loading={loadingPolicy}
+                        saving={savingPolicy}
+                        onChange={(updates) =>
+                            setPolicyDraft((p) => ({ ...p, ...updates }))
+                        }
+                        onSave={savePolicy}
                     />
                 )}
             </main>

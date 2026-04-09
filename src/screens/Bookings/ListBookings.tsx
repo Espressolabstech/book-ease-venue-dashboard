@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ArrowLeft, Lock, Plus } from 'lucide-react';
 import { DateStrip } from '../../components/DateStrip';
-import { cn } from '../../utils/twMerge';
+import { cn, formatTime } from '../../utils/twMerge';
 import { getCourts } from '../../api/adapters/courts';
 import { getAvailableSlots } from '../../api/adapters/bookings';
 import { path } from '../../navigation/commanPaths';
@@ -258,7 +258,7 @@ const ListBookings = () => {
                                             key={`time-${time}`}
                                             className="bg-card flex items-center justify-center px-1 py-1.5 text-[10px] text-muted-foreground font-medium"
                                         >
-                                            {time}
+                                            {formatTime(time)}
                                         </div>
                                         {allCourtsSlots.map(({ court, slots: courtSlots }) => {
                                             const slot = courtSlots[rowIdx];
@@ -330,7 +330,7 @@ const ListBookings = () => {
                                         }}
                                     >
                                         <div className="w-16 shrink-0 text-sm font-medium text-muted-foreground">
-                                            {slot.startTime}
+                                            {formatTime(slot.startTime)}
                                         </div>
                                         <div
                                             className={cn(

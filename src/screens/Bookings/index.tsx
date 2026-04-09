@@ -2,7 +2,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
-import { cn } from '../../utils/twMerge';
+import { cn, formatTime } from '../../utils/twMerge';
 import {
     ArrowLeft,
     Check,
@@ -337,7 +337,7 @@ const Booking = () => {
                 currency: razorpay.currency,
                 order_id: razorpay.orderId,
                 name: 'Book Ease',
-                description: `Court booking · ${firstSelectedSlot?.start_time} – ${lastSelectedSlot?.end_time}`,
+                description: `Court booking · ${firstSelectedSlot ? formatTime(firstSelectedSlot.start_time) : ''} – ${lastSelectedSlot ? formatTime(lastSelectedSlot.end_time) : ''}`,
                 handler: async (response) => {
                     try {
                         const verifyRes = await verifyBookingPayment(booking.id, {
@@ -510,7 +510,7 @@ const Booking = () => {
                                                 className="flex gap-1"
                                             >
                                                 <div className="w-14 shrink-0 pt-1 text-xs text-muted-foreground font-medium">
-                                                    {hour}
+                                                    {formatTime(hour)}
                                                 </div>
                                                 {courtSlots.map(
                                                     ({ court: c, slots }) => {
@@ -907,7 +907,7 @@ const Booking = () => {
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Time</span>
                                         <span className="text-foreground">
-                                            {bookedResult.startTime} – {bookedResult.endTime}
+                                            {formatTime(bookedResult.startTime)} – {formatTime(bookedResult.endTime)}
                                         </span>
                                     </div>
                                     <div className="border-t pt-2 flex justify-between font-semibold">
@@ -970,8 +970,8 @@ const Booking = () => {
                                             Time
                                         </span>
                                         <span className="text-foreground">
-                                            {firstSelectedSlot?.start_time} –{' '}
-                                            {lastSelectedSlot?.end_time}
+                                            {firstSelectedSlot ? formatTime(firstSelectedSlot.start_time) : ''} –{' '}
+                                            {lastSelectedSlot ? formatTime(lastSelectedSlot.end_time) : ''}
                                         </span>
                                     </div>
                                     <div className="border-t pt-2 flex justify-between font-semibold">

@@ -4,6 +4,7 @@ import {
     ChevronRight,
     Clock,
     LayoutGrid,
+    ShieldCheck,
     Zap,
 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
@@ -97,6 +98,12 @@ const HubView = ({
                         title="Facility Info"
                         subtitle={`${facility.amenities.length} amenities · Bio ${facility.bio ? 'set' : 'empty'}`}
                         onClick={() => onNavigate('facility')}
+                    />
+                    <HubCard
+                        icon={<ShieldCheck className="h-5 w-5 text-primary" />}
+                        title="Booking Rules"
+                        subtitle="Minimum duration, advance booking, cancellation policy"
+                        onClick={() => onNavigate('policy')}
                     />
                 </div>
             </div>

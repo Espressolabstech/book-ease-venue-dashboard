@@ -5,7 +5,8 @@ declare global {
         | 'peak'
         | 'courts'
         | 'downtime'
-        | 'facility';
+        | 'facility'
+        | 'policy';
 
     type SportType = 'PICKELBALL' | 'PADEL';
     type CourtEnvironment = 'INDOOR' | 'OUTDOOR';

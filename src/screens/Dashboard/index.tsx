@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { path } from '../../navigation/commanPaths';
 import { listVenueBookings } from '../../api/adapters/bookings';
-import { cn } from '../../utils/twMerge';
+import { cn, formatTime } from '../../utils/twMerge';
 
 const menuItems = [
     {
@@ -160,8 +160,8 @@ const Dashboard = () => {
                                             {b.user?.name ?? '—'}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {b.court?.name} · {b.startTime} –{' '}
-                                            {b.endTime}
+                                            {b.court?.name} · {formatTime(b.startTime)} –{' '}
+                                            {formatTime(b.endTime)}
                                         </p>
                                     </div>
                                     <span

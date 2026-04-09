@@ -9,6 +9,7 @@ declare global {
         cancellationPolicy: CancellationPolicy;
         autoConfirm: boolean;
         maxBookingsPerPlayerDay: number | null;
+        minimumSlotMinutes: number;
         createdAt: string;
         updatedAt: string;
     }
@@ -23,6 +24,7 @@ declare global {
         cancellationPolicy?: CancellationPolicy;
         autoConfirm?: boolean;
         maxBookingsPerPlayerDay?: number | null;
+        minimumSlotMinutes?: number;
     }
 
     interface UpdateBookingPolicyResponse {
