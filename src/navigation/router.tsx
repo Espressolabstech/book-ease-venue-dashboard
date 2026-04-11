@@ -14,6 +14,7 @@ import Bookings from '../screens/Bookings';
 import ListBookings from '../screens/Bookings/ListBookings';
 import Players from '../screens/Players';
 import Analytics from '../screens/Analytics';
+import Wallets from '../screens/Wallets';
 
 export const router = createBrowserRouter([
     {
@@ -51,5 +52,9 @@ export const router = createBrowserRouter([
     {
         path: path.analytics,
         element: <ProtectedComponentWrapper children={<Analytics />} />,
+    },
+    {
+        path: path.wallet,
+        element: <ProtectedComponentWrapper children={<Wallets />} />,
     },
 ]);

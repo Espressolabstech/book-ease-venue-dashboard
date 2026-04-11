@@ -86,4 +86,7 @@ export const endpoints = {
     addPlayer: '/players/add',
     listPlayers: '/players/list',
     getPlayer: (playerId: string) => `/players/${playerId}`,
+
+    // Wallet endpoints
+    playerWallets: '/players/wallets',
 };

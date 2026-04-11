@@ -1,5 +1,13 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, CalendarDays, Loader2, Plus, Settings, Users } from 'lucide-react';
+import {
+    BarChart3,
+    CalendarDays,
+    Loader2,
+    Plus,
+    Settings,
+    Users,
+    Wallet,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { path } from '../../navigation/commanPaths';
@@ -36,6 +44,13 @@ const menuItems = [
         label: 'Settings',
         path: path.settings,
         color: 'bg-muted text-muted-foreground',
+    },
+    {
+        icon: Wallet,
+        label: 'Wallets',
+        path: path.wallet,
+        color: 'bg-success/10 text-success',
+        roles: ['venue_admin'],
     },
 ];
 
@@ -75,8 +90,7 @@ const Dashboard = () => {
             .finally(() => setLoading(false));
     }, []);
 
-    const occupancy =
-        total !== null ? Math.round((total / 15) * 100) : null;
+    const occupancy = total !== null ? Math.round((total / 15) * 100) : null;
 
     return (
         <div className="min-h-screen bg-background">
@@ -160,7 +174,8 @@ const Dashboard = () => {
                                             {b.user?.name ?? '—'}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {b.court?.name} · {formatTime(b.startTime)} –{' '}
+                                            {b.court?.name} ·{' '}
+                                            {formatTime(b.startTime)} –{' '}
                                             {formatTime(b.endTime)}
                                         </p>
                                     </div>

@@ -8,4 +8,5 @@ export const path = {
     listBooking: '/manager/bookings',
     players: '/manager/players',
     analytics: '/manager/analytics',
+    wallet: '/manager/wallets',
 };
