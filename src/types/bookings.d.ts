@@ -3,11 +3,11 @@ declare global {
 
     type Step = 'court' | 'player' | 'payment' | 'confirm' | 'success';
 
-    type IndianPaymentMethod = 'upi' | 'cash' | 'card' | 'net_banking';
+    type IndianPaymentMethod = 'upi' | 'cash' | 'card' | 'net_banking' | 'wallet';
 
     type PaymentStatus = 'paid' | 'pending';
 
-    type ApiPaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NET_BANKING';
+    type ApiPaymentMethod = 'UPI' | 'CASH' | 'CARD' | 'NET_BANKING' | 'WALLET';
 
     type BookingStatus =
         | 'PENDING'

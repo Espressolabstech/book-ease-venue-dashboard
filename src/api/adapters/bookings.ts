@@ -90,3 +90,15 @@ export const getBooking = async (
         method: 'GET',
     });
 };
+
+export const getPlayerVenueWallet = async (
+    userId: string,
+): Promise<{ message: string; data: { walletBalance: number } }> => {
+    // Uses the player wallets list, filtered server-side; we grab this player's balance
+    const res = await apiClient<{ message: string; data: { players: ApiPlayerWallet[] } }>({
+        url: endpoints.playerWallets,
+        method: 'GET',
+    });
+    const player = res.data.players.find((p) => p.userId === userId);
+    return { message: res.message, data: { walletBalance: player?.walletBalance ?? 0 } };
+};

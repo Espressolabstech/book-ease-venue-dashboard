@@ -26,6 +26,7 @@ import { getCourts } from '../../api/adapters/courts';
 import {
     addPlayer,
     getAvailableSlots,
+    getPlayerVenueWallet,
     listVenuePlayers,
     managerCreateBooking,
     verifyBookingPayment,
@@ -65,6 +66,7 @@ const Booking = () => {
         useState<IndianPaymentMethod>('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAddingPlayer, setIsAddingPlayer] = useState(false);
+    const [playerWalletBalance, setPlayerWalletBalance] = useState<number | null>(null);
 
     // ── API data ────────────────────────────────────────────────────────────
     type SlotItem = {
@@ -114,6 +116,18 @@ const Booking = () => {
             )
             .finally(() => setPlayersLoading(false));
     }, [step]);
+
+    // Fetch venue wallet balance when an existing player is selected
+    useEffect(() => {
+        if (!selectedPlayer) {
+            setPlayerWalletBalance(null);
+            if (paymentMethod === 'wallet') setPaymentMethod('cash');
+            return;
+        }
+        getPlayerVenueWallet(selectedPlayer.userId)
+            .then((res) => setPlayerWalletBalance(res.data.walletBalance))
+            .catch(() => setPlayerWalletBalance(0));
+    }, [selectedPlayer?.userId]);
 
     // ── Derived court / slot data ───────────────────────────────────────────
     const availableSports = useMemo(
@@ -275,9 +289,14 @@ const Booking = () => {
             cash: 'CASH',
             card: 'CARD',
             net_banking: 'NET_BANKING',
+            wallet: 'WALLET',
         };
         return map[pm];
     };
+
+    const isWalletAvailable = selectedPlayer !== null && !showNewPlayer;
+    const walletHasSufficientBalance =
+        playerWalletBalance !== null && playerWalletBalance >= total;
 
     const handleConfirm = async () => {
         if (!selectedSlotObjects.length) return;
@@ -836,22 +855,45 @@ const Booking = () => {
                                 Payment Method
                             </Label>
                             <div className="grid grid-cols-2 gap-2">
-                                {paymentMethods.map((pm) => (
-                                    <button
-                                        key={pm.value}
-                                        onClick={() =>
-                                            setPaymentMethod(pm.value)
-                                        }
-                                        className={cn(
-                                            'rounded-lg border p-3 text-sm font-medium transition-all text-center flex items-center justify-center gap-2',
-                                            paymentMethod === pm.value
-                                                ? 'border-primary bg-primary text-primary-foreground'
-                                                : 'border-border bg-card text-foreground hover:border-primary/50',
-                                        )}
-                                    >
-                                        <span>{pm.icon}</span> {pm.label}
-                                    </button>
-                                ))}
+                                {paymentMethods.map((pm) => {
+                                    const isWallet = pm.value === 'wallet';
+                                    const disabled = isWallet && (!isWalletAvailable || !walletHasSufficientBalance);
+                                    return (
+                                        <button
+                                            key={pm.value}
+                                            onClick={() => !disabled && setPaymentMethod(pm.value)}
+                                            disabled={disabled}
+                                            className={cn(
+                                                'rounded-lg border p-3 text-sm font-medium transition-all text-center flex flex-col items-center justify-center gap-1',
+                                                paymentMethod === pm.value
+                                                    ? 'border-primary bg-primary text-primary-foreground'
+                                                    : 'border-border bg-card text-foreground hover:border-primary/50',
+                                                disabled && 'opacity-40 cursor-not-allowed hover:border-border',
+                                            )}
+                                        >
+                                            <span className="flex items-center gap-1.5">
+                                                <span>{pm.icon}</span> {pm.label}
+                                            </span>
+                                            {isWallet && isWalletAvailable && (
+                                                <span className={cn(
+                                                    'text-[10px] font-normal',
+                                                    paymentMethod === 'wallet' ? 'text-primary-foreground/80' : 'text-muted-foreground',
+                                                )}>
+                                                    {playerWalletBalance === null
+                                                        ? 'Loading…'
+                                                        : walletHasSufficientBalance
+                                                        ? `₹${playerWalletBalance.toLocaleString('en-IN')} available`
+                                                        : `₹${playerWalletBalance.toLocaleString('en-IN')} — low`}
+                                                </span>
+                                            )}
+                                            {isWallet && !isWalletAvailable && (
+                                                <span className="text-[10px] font-normal text-muted-foreground">
+                                                    Existing player only
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
 
