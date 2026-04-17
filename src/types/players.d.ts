@@ -77,6 +77,11 @@ declare global {
         venueId: string;
         userId: string;
         tier: PlayerApiTier;
+        packageTier: PlayerApiTier | null;
+        packageGrantedAt: string | null;
+        graceTier: PlayerApiTier | null;
+        graceUntil: string | null;
+        windowSpend: string;
         totalBookings: number;
         totalSpend: string;
         avgSpend: number;
@@ -137,6 +142,12 @@ declare global {
         weeklyStreak: number;
         preferences: PlayerPreferences;
         user: PlayerApiUserDetail;
+        // Explicitly redeclared so the TS language server always resolves them
+        packageTier: PlayerApiTier | null;
+        packageGrantedAt: string | null;
+        graceTier: PlayerApiTier | null;
+        graceUntil: string | null;
+        windowSpend: string;
     }
 
     interface TierBenefit {

@@ -25,6 +25,43 @@ import {
     listPlayers,
 } from '../../api/adapters/players';
 
+// ── Tier helpers ──────────────────────────────────────────────────────────────
+
+const TIER_RANK: Record<string, number> = { CLUB: 1, PRO: 2, ELITE: 3 };
+const SIX_MONTHS_MS = 6 * 30 * 24 * 60 * 60 * 1000;
+
+function effectiveTierFor(p: PlayerApiModel): PlayerApiTier {
+    const ranks: number[] = [TIER_RANK[p.tier] ?? 1];
+    if (p.packageTier && p.packageGrantedAt) {
+        if (Date.now() - new Date(p.packageGrantedAt).getTime() < SIX_MONTHS_MS)
+            ranks.push(TIER_RANK[p.packageTier] ?? 1);
+    }
+    if (p.graceTier && p.graceUntil && new Date() < new Date(p.graceUntil))
+        ranks.push(TIER_RANK[p.graceTier] ?? 1);
+    const maxRank = Math.max(...ranks);
+    return (Object.entries(TIER_RANK).find(([, r]) => r === maxRank)?.[0] ?? 'CLUB') as PlayerApiTier;
+}
+
+function tierSourceFor(p: PlayerApiModel): 'earned' | 'package' | 'grace' {
+    if (p.packageTier && p.packageGrantedAt) {
+        const age = Date.now() - new Date(p.packageGrantedAt).getTime();
+        if (age < SIX_MONTHS_MS && (TIER_RANK[p.packageTier] ?? 1) >= (TIER_RANK[p.tier] ?? 1))
+            return 'package';
+    }
+    if (p.graceTier && p.graceUntil && new Date() < new Date(p.graceUntil))
+        return 'grace';
+    return 'earned';
+}
+
+function packageExpiresIn(packageGrantedAt: string): string {
+    const expiresAt = new Date(new Date(packageGrantedAt).getTime() + SIX_MONTHS_MS);
+    const days = Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days <= 0) return 'expired';
+    if (days === 1) return '1 day left';
+    if (days < 30) return `${days} days left`;
+    return `until ${expiresAt.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatLastVisit(dateStr: string): string {
@@ -186,7 +223,10 @@ const Players = () => {
         }
 
         const { player, tierBenefit, recentBookings } = detail;
-        const tierKey = toTierKey(player.tier);
+        const effTier = effectiveTierFor(player);
+        const source = tierSourceFor(player);
+        const tierKey = toTierKey(effTier);
+        const naturalTierKey = toTierKey(player.tier);
         const tier = tierConfig[tierKey];
         const TierIcon = tier.icon;
         const initials = getInitials(player.user.name);
@@ -308,7 +348,7 @@ const Players = () => {
                             <TierIcon className={cn('h-4 w-4', tier.color)} />
                             Tier Status
                         </h3>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <span
                                 className={cn(
                                     'rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1.5',
@@ -319,20 +359,33 @@ const Players = () => {
                                 <TierIcon className="h-3.5 w-3.5" />
                                 {tier.label}
                             </span>
-                            {player.tier !== 'ELITE' && (
+                            {source === 'package' && (
+                                <span className="rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 px-2.5 py-1 text-[10px] font-bold">
+                                    Package · {player.packageGrantedAt ? packageExpiresIn(player.packageGrantedAt) : ''}
+                                </span>
+                            )}
+                            {source === 'grace' && (
+                                <span className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-2.5 py-1 text-[10px] font-bold">
+                                    Grace period · until {player.graceUntil ? new Date(player.graceUntil).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}
+                                </span>
+                            )}
+                            {effTier !== 'ELITE' && source === 'earned' && (
                                 <span className="text-xs text-muted-foreground">
-                                    → Next:{' '}
-                                    {player.tier === 'CLUB' ? 'Pro' : 'Elite'}
+                                    → Next: {effTier === 'CLUB' ? 'Pro' : 'Elite'}
                                 </span>
                             )}
                         </div>
-                        {player.tier !== 'ELITE' && (
+                        {source === 'package' && naturalTierKey !== tierKey && (
                             <div className="text-xs text-muted-foreground">
-                                {player.totalBookings} bookings · ₹
-                                {parseFloat(
-                                    player.totalSpend,
-                                ).toLocaleString()}{' '}
-                                spent in window
+                                Natural tier: <span className="font-medium capitalize">{tierConfig[naturalTierKey].label}</span> · package overrides until expiry
+                            </div>
+                        )}
+                        {source === 'earned' && effTier !== 'ELITE' && (
+                            <div className="text-xs text-muted-foreground">
+                                ₹{parseFloat(player.windowSpend).toLocaleString()} spent this window
+                                {effTier === 'CLUB'
+                                    ? ` · ₹${(15000 - parseFloat(player.windowSpend)).toLocaleString()} to Pro`
+                                    : ` · ₹${(25000 - parseFloat(player.windowSpend)).toLocaleString()} to Elite`}
                             </div>
                         )}
                     </div>
@@ -741,7 +794,9 @@ const Players = () => {
                         ) : (
                             <div className="space-y-2">
                                 {players.map((player, idx) => {
-                                    const tierKey = toTierKey(player.tier);
+                                    const effTier = effectiveTierFor(player);
+                                    const source = tierSourceFor(player);
+                                    const tierKey = toTierKey(effTier);
                                     const tier = tierConfig[tierKey];
                                     const TierIcon = tier.icon;
                                     return (
@@ -775,6 +830,16 @@ const Players = () => {
                                                         <TierIcon className="h-2.5 w-2.5" />
                                                         {tier.label}
                                                     </span>
+                                                    {source === 'package' && (
+                                                        <span className="rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 px-1.5 py-px text-[9px] font-bold shrink-0">
+                                                            PKG
+                                                        </span>
+                                                    )}
+                                                    {source === 'grace' && (
+                                                        <span className="rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-1.5 py-px text-[9px] font-bold shrink-0">
+                                                            GRACE
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                                     <span className="flex items-center gap-1">

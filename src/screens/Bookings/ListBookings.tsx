@@ -448,9 +448,16 @@ const ListBookings = () => {
                                     <p className="font-semibold text-foreground">{selectedBooking.court?.name}</p>
                                     <p className="text-sm text-muted-foreground">{selectedBooking.venue?.name}</p>
                                 </div>
-                                <Badge className={bookingStatusColors[selectedBooking.status] ?? ''}>
-                                    {selectedBooking.status.replace(/_/g, ' ')}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                    {selectedBooking.isOtcActive && (
+                                        <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-[10px]">
+                                            OTC
+                                        </Badge>
+                                    )}
+                                    <Badge className={bookingStatusColors[selectedBooking.status] ?? ''}>
+                                        {selectedBooking.status.replace(/_/g, ' ')}
+                                    </Badge>
+                                </div>
                             </div>
 
                             <div className="space-y-2 rounded-lg bg-muted/40 p-3">
@@ -475,6 +482,12 @@ const ListBookings = () => {
                                     </div>
                                 )}
                             </div>
+
+                            {selectedBooking.isOtcActive && (
+                                <div className="rounded-lg bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-3 py-2 text-xs text-violet-700 dark:text-violet-400">
+                                    Open to Cancel — this slot will auto-release and the player will be refunded if someone else books it.
+                                </div>
+                            )}
 
                             {(selectedBooking.status === 'CONFIRMED' || selectedBooking.status === 'PENDING') && (
                                 <Button

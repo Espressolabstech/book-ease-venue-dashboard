@@ -76,6 +76,8 @@ declare global {
         cancelReason: string | null;
         confirmedAt: string | null;
         cancelledAt: string | null;
+        isOtcActive: boolean;
+        otcActivatedAt: string | null;
         createdAt: string;
         updatedAt: string;
         user?: BookingUserModel;
