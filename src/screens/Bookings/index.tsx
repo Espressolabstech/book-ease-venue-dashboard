@@ -10,6 +10,7 @@ import {
     ChevronRight,
     Loader2,
     Search,
+    Share2,
     UserPlus,
 } from 'lucide-react';
 import { DateStrip } from '../../components/DateStrip';
@@ -66,7 +67,9 @@ const Booking = () => {
         useState<IndianPaymentMethod>('cash');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isAddingPlayer, setIsAddingPlayer] = useState(false);
-    const [playerWalletBalance, setPlayerWalletBalance] = useState<number | null>(null);
+    const [playerWalletBalance, setPlayerWalletBalance] = useState<
+        number | null
+    >(null);
 
     // ── API data ────────────────────────────────────────────────────────────
     type SlotItem = {
@@ -168,7 +171,10 @@ const Booking = () => {
                             date: dateStr,
                             start_time: s.startTime,
                             end_time: s.endTime,
-                            status: s.status === 'available' ? 'available' : 'booked',
+                            status:
+                                s.status === 'available'
+                                    ? 'available'
+                                    : 'booked',
                         }));
                     return [
                         c.id,
@@ -256,7 +262,9 @@ const Booking = () => {
 
     // ── Handlers ────────────────────────────────────────────────────────────
     const handleSlotTap = (courtId: string, slotId: string) => {
-        const slot = (courtSlotsData[courtId] ?? []).find((s) => s.id === slotId);
+        const slot = (courtSlotsData[courtId] ?? []).find(
+            (s) => s.id === slotId,
+        );
         if (!slot || slot.status !== 'available') return;
 
         if (selectedCourt !== courtId) {
@@ -297,6 +305,40 @@ const Booking = () => {
     const isWalletAvailable = selectedPlayer !== null && !showNewPlayer;
     const walletHasSufficientBalance =
         playerWalletBalance !== null && playerWalletBalance >= total;
+
+    const handleShare = async () => {
+        if (!bookedResult) return;
+        const playerName = selectedPlayer
+            ? (selectedPlayer.user.name ?? selectedPlayer.user.phone)
+            : newPlayerName || newPlayerPhone;
+        const text = [
+            `🎾 Booking Confirmed!`,
+            ``,
+            `📋 Ref: ${bookedResult.bookingRef}`,
+            `👤 Player: ${playerName}`,
+            `🏟️ Court: ${selectedCourtData?.name ?? ''}`,
+            `📅 Date: ${format(selectedDate, 'EEE, d MMM yyyy')}`,
+            `⏰ Time: ${formatTime(bookedResult.startTime)} – ${formatTime(bookedResult.endTime)}`,
+            `💰 Amount Paid: ₹${bookedResult.finalAmount}`,
+            `💳 Payment: ${paymentMethodDisplayLabels[paymentMethod]}`,
+            ``,
+            `See you on the court! 🏆`,
+        ].join('\n');
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: '🎾 Booking Confirmed!', text });
+            } catch {
+                // user cancelled or browser blocked — silently ignore
+            }
+        } else {
+            await navigator.clipboard.writeText(text);
+            toast({
+                title: 'Copied to clipboard',
+                description: 'Booking details copied!',
+            });
+        }
+    };
 
     const handleConfirm = async () => {
         if (!selectedSlotObjects.length) return;
@@ -359,11 +401,14 @@ const Booking = () => {
                 description: `Court booking · ${firstSelectedSlot ? formatTime(firstSelectedSlot.start_time) : ''} – ${lastSelectedSlot ? formatTime(lastSelectedSlot.end_time) : ''}`,
                 handler: async (response) => {
                     try {
-                        const verifyRes = await verifyBookingPayment(booking.id, {
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature,
-                        });
+                        const verifyRes = await verifyBookingPayment(
+                            booking.id,
+                            {
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpaySignature: response.razorpay_signature,
+                            },
+                        );
                         markBooked();
                         setBookedResult(verifyRes.data.booking);
                         setStep('success');
@@ -414,7 +459,12 @@ const Booking = () => {
                                     ? 'bg-success'
                                     : step === s
                                       ? 'bg-primary'
-                                      : ['court', 'player', 'payment', 'confirm'].indexOf(step) > i
+                                      : [
+                                              'court',
+                                              'player',
+                                              'payment',
+                                              'confirm',
+                                          ].indexOf(step) > i
                                         ? 'bg-primary/40'
                                         : 'bg-border',
                             )}
@@ -857,33 +907,47 @@ const Booking = () => {
                             <div className="grid grid-cols-2 gap-2">
                                 {paymentMethods.map((pm) => {
                                     const isWallet = pm.value === 'wallet';
-                                    const disabled = isWallet && (!isWalletAvailable || !walletHasSufficientBalance);
+                                    const disabled =
+                                        isWallet &&
+                                        (!isWalletAvailable ||
+                                            !walletHasSufficientBalance);
                                     return (
                                         <button
                                             key={pm.value}
-                                            onClick={() => !disabled && setPaymentMethod(pm.value)}
+                                            onClick={() =>
+                                                !disabled &&
+                                                setPaymentMethod(pm.value)
+                                            }
                                             disabled={disabled}
                                             className={cn(
                                                 'rounded-lg border p-3 text-sm font-medium transition-all text-center flex flex-col items-center justify-center gap-1',
                                                 paymentMethod === pm.value
                                                     ? 'border-primary bg-primary text-primary-foreground'
                                                     : 'border-border bg-card text-foreground hover:border-primary/50',
-                                                disabled && 'opacity-40 cursor-not-allowed hover:border-border',
+                                                disabled &&
+                                                    'opacity-40 cursor-not-allowed hover:border-border',
                                             )}
                                         >
                                             <span className="flex items-center gap-1.5">
-                                                <span>{pm.icon}</span> {pm.label}
+                                                <span>{pm.icon}</span>{' '}
+                                                {pm.label}
                                             </span>
                                             {isWallet && isWalletAvailable && (
-                                                <span className={cn(
-                                                    'text-[10px] font-normal',
-                                                    paymentMethod === 'wallet' ? 'text-primary-foreground/80' : 'text-muted-foreground',
-                                                )}>
-                                                    {playerWalletBalance === null
+                                                <span
+                                                    className={cn(
+                                                        'text-[10px] font-normal',
+                                                        paymentMethod ===
+                                                            'wallet'
+                                                            ? 'text-primary-foreground/80'
+                                                            : 'text-muted-foreground',
+                                                    )}
+                                                >
+                                                    {playerWalletBalance ===
+                                                    null
                                                         ? 'Loading…'
                                                         : walletHasSufficientBalance
-                                                        ? `₹${playerWalletBalance.toLocaleString('en-IN')} available`
-                                                        : `₹${playerWalletBalance.toLocaleString('en-IN')} — low`}
+                                                          ? `₹${playerWalletBalance.toLocaleString('en-IN')} available`
+                                                          : `₹${playerWalletBalance.toLocaleString('en-IN')} — low`}
                                                 </span>
                                             )}
                                             {isWallet && !isWalletAvailable && (
@@ -929,37 +993,63 @@ const Booking = () => {
                             <CardContent className="p-4 space-y-3">
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Player</span>
+                                        <span className="text-muted-foreground">
+                                            Player
+                                        </span>
                                         <span className="font-medium text-foreground">
                                             {selectedPlayer
-                                                ? (selectedPlayer.user.name ?? selectedPlayer.user.phone)
-                                                : newPlayerName || newPlayerPhone}
+                                                ? (selectedPlayer.user.name ??
+                                                  selectedPlayer.user.phone)
+                                                : newPlayerName ||
+                                                  newPlayerPhone}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Court</span>
-                                        <span className="text-foreground">{selectedCourtData?.name}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Date</span>
+                                        <span className="text-muted-foreground">
+                                            Court
+                                        </span>
                                         <span className="text-foreground">
-                                            {format(selectedDate, 'EEE, d MMM yyyy')}
+                                            {selectedCourtData?.name}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Time</span>
+                                        <span className="text-muted-foreground">
+                                            Date
+                                        </span>
                                         <span className="text-foreground">
-                                            {formatTime(bookedResult.startTime)} – {formatTime(bookedResult.endTime)}
+                                            {format(
+                                                selectedDate,
+                                                'EEE, d MMM yyyy',
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-muted-foreground">
+                                            Time
+                                        </span>
+                                        <span className="text-foreground">
+                                            {formatTime(bookedResult.startTime)}{' '}
+                                            – {formatTime(bookedResult.endTime)}
                                         </span>
                                     </div>
                                     <div className="border-t pt-2 flex justify-between font-semibold">
-                                        <span className="text-foreground">Amount Paid</span>
-                                        <span className="text-foreground">₹{bookedResult.finalAmount}</span>
+                                        <span className="text-foreground">
+                                            Amount Paid
+                                        </span>
+                                        <span className="text-foreground">
+                                            ₹{bookedResult.finalAmount}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Payment</span>
+                                        <span className="text-muted-foreground">
+                                            Payment
+                                        </span>
                                         <span className="text-foreground">
-                                            {paymentMethodDisplayLabels[paymentMethod]}
+                                            {
+                                                paymentMethodDisplayLabels[
+                                                    paymentMethod
+                                                ]
+                                            }
                                         </span>
                                     </div>
                                 </div>
@@ -1012,8 +1102,17 @@ const Booking = () => {
                                             Time
                                         </span>
                                         <span className="text-foreground">
-                                            {firstSelectedSlot ? formatTime(firstSelectedSlot.start_time) : ''} –{' '}
-                                            {lastSelectedSlot ? formatTime(lastSelectedSlot.end_time) : ''}
+                                            {firstSelectedSlot
+                                                ? formatTime(
+                                                      firstSelectedSlot.start_time,
+                                                  )
+                                                : ''}{' '}
+                                            –{' '}
+                                            {lastSelectedSlot
+                                                ? formatTime(
+                                                      lastSelectedSlot.end_time,
+                                                  )
+                                                : ''}
                                         </span>
                                     </div>
                                     <div className="border-t pt-2 flex justify-between font-semibold">
@@ -1093,12 +1192,22 @@ const Booking = () => {
                         </Button>
                     )}
                     {step === 'success' && (
-                        <Button
-                            className="w-full"
-                            onClick={() => navigate(path.dashboard)}
-                        >
-                            Back to Dashboard
-                        </Button>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={handleShare}
+                            >
+                                <Share2 className="h-4 w-4 mr-2" />
+                                Share Confirmation
+                            </Button>
+                            <Button
+                                className="w-full"
+                                onClick={() => navigate(path.dashboard)}
+                            >
+                                Back to Dashboard
+                            </Button>
+                        </div>
                     )}
                 </div>
             </div>
