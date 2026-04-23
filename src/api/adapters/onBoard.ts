@@ -63,3 +63,26 @@ export const updateVenueDescription = async (
         data: { description },
     });
 };
+
+export const updateVenueInfo = async (data: {
+    address?: string;
+    phone?: string;
+    latitude?: number;
+    longitude?: number;
+}): Promise<{
+    data: {
+        venue: {
+            id: string;
+            address: string | null;
+            phone: string | null;
+            latitude: number | null;
+            longitude: number | null;
+        };
+    };
+}> => {
+    return apiClient({
+        url: endpoints.updateVenueInfo,
+        method: 'PATCH',
+        data,
+    });
+};

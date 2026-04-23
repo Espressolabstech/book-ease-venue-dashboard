@@ -31,6 +31,8 @@ const DowntimeSection = ({
         courtId: string;
         startDate: string;
         endDate: string;
+        startTime: string;
+        endTime: string;
         reason: string;
     };
     onShowAdd: () => void;
@@ -114,6 +116,32 @@ const DowntimeSection = ({
                                 />
                             </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <Label className="text-xs">Start Time</Label>
+                                <Input
+                                    type="time"
+                                    value={newDowntime.startTime}
+                                    onChange={(e) =>
+                                        onNewChange({
+                                            startTime: e.target.value,
+                                        })
+                                    }
+                                    className="h-8 text-xs"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs">End Time</Label>
+                                <Input
+                                    type="time"
+                                    value={newDowntime.endTime}
+                                    onChange={(e) =>
+                                        onNewChange({ endTime: e.target.value })
+                                    }
+                                    className="h-8 text-xs"
+                                />
+                            </div>
+                        </div>
                         <div>
                             <Label className="text-xs">Reason</Label>
                             <Input
@@ -160,6 +188,8 @@ const DowntimeSection = ({
                                         )}
                                         {dt.endDate !== dt.startDate &&
                                             ` – ${format(new Date(dt.endDate), 'MMM d, yyyy')}`}
+                                        {' · '}
+                                        {dt.startTime} – {dt.endTime}
                                     </p>
                                 </div>
                                 <button
@@ -190,6 +220,8 @@ const DowntimeSection = ({
                                     {format(new Date(dt.startDate), 'MMM d')}
                                     {dt.endDate !== dt.startDate &&
                                         ` – ${format(new Date(dt.endDate), 'MMM d')}`}
+                                    {' · '}
+                                    {dt.startTime} – {dt.endTime}
                                 </p>
                             </CardContent>
                         </Card>

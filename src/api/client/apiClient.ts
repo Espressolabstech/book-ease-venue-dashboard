@@ -22,8 +22,8 @@ const apiClient = async <T = unknown>(
         return response.data;
     } catch (error: unknown) {
         if (axios.isAxiosError(error) && error.response?.status === 401) {
-            removeToken();
-            window.location.href = '/login';
+            // removeToken();
+            // window.location.href = '/login';
         }
 
         if (axios.isAxiosError(error) && error.response?.status === 403) {

@@ -12,6 +12,7 @@ export const endpoints = {
     isOnBoarded: '/onboard/venue/is-onboarded',
     getOnBoardedVenueDetails: '/onboard/venue/details',
     updateVenueDescription: '/venue/update-description',
+    updateVenueInfo: '/venue/update-info',
 
     // courts Endpoints
     getCourts: '/courts/list',
@@ -89,4 +90,9 @@ export const endpoints = {
 
     // Wallet endpoints
     playerWallets: '/players/wallets',
+
+    // Downtime endpoints
+    listDowntimes: '/downtime/list',
+    createDowntime: '/downtime/create',
+    deleteDowntime: (id: string) => `/downtime/${id}/delete`,
 };

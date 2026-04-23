@@ -2,6 +2,7 @@ import { Loader2, Save } from 'lucide-react';
 import { AMENITY_GROUPS } from '../../utils/settings';
 import { Card, CardContent } from '../ui/card';
 import { Textarea } from '../ui/textarea';
+import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { cn } from '../../utils/twMerge';
@@ -10,17 +11,105 @@ const FacilitySection = ({
     facility,
     onBioChange,
     onToggleAmenity,
+    onFieldChange,
     onSave,
     saving,
 }: {
     facility: FacilityInfo;
     onBioChange: (bio: string) => void;
     onToggleAmenity: (a: string) => void;
+    onFieldChange: (field: keyof FacilityInfo, value: string) => void;
     onSave: () => void;
     saving?: boolean;
 }) => {
     return (
         <div className="space-y-4">
+            {/* Contact & Location */}
+            <Card>
+                <CardContent className="p-4 space-y-4">
+                    <h3 className="font-semibold text-foreground">
+                        Facility Information
+                    </h3>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="facility-phone">Phone Number</Label>
+                        <Input
+                            id="facility-phone"
+                            type="tel"
+                            value={facility.phone}
+                            onChange={(e) =>
+                                onFieldChange('phone', e.target.value)
+                            }
+                            placeholder="+91 98765 43210"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="facility-address">Address</Label>
+                        <Textarea
+                            id="facility-address"
+                            value={facility.address}
+                            onChange={(e) =>
+                                onFieldChange('address', e.target.value)
+                            }
+                            placeholder="Street, area, city…"
+                            rows={2}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Location Pin</Label>
+                        <p className="text-xs text-muted-foreground">
+                            Enter the latitude and longitude for your venue pin.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                                <Label
+                                    htmlFor="facility-lat"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    Latitude
+                                </Label>
+                                <Input
+                                    id="facility-lat"
+                                    type="number"
+                                    step="any"
+                                    value={facility.latitude}
+                                    onChange={(e) =>
+                                        onFieldChange(
+                                            'latitude',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="e.g. 28.6139"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label
+                                    htmlFor="facility-lng"
+                                    className="text-xs text-muted-foreground"
+                                >
+                                    Longitude
+                                </Label>
+                                <Input
+                                    id="facility-lng"
+                                    type="number"
+                                    step="any"
+                                    value={facility.longitude}
+                                    onChange={(e) =>
+                                        onFieldChange(
+                                            'longitude',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="e.g. 77.2090"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardContent className="p-4 space-y-3">
                     <h3 className="font-semibold text-foreground">

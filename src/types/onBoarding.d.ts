@@ -315,6 +315,9 @@ declare global {
                 state: string;
                 country: string;
                 pincode: string;
+                address?: string;
+                latitude?: number;
+                longitude?: number;
                 description?: string;
             };
         };

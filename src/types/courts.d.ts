@@ -26,7 +26,10 @@ declare global {
         courtId: string;
         startDate: string;
         endDate: string;
+        startTime: string;
+        endTime: string;
         reason: string;
+        court?: { id: string; name: string; sport: string };
     }
 
     interface CourtData {
@@ -65,6 +68,10 @@ declare global {
     interface FacilityInfo {
         bio: string;
         amenities: string[];
+        address: string;
+        phone: string;
+        latitude: string;
+        longitude: string;
     }
 
     interface CourtImage {

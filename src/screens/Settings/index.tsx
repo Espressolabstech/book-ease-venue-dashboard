@@ -42,7 +42,13 @@ import {
 import {
     getOnBoardedVenueDetails,
     updateVenueDescription,
+    updateVenueInfo,
 } from '../../api/adapters/onBoard';
+import {
+    listDowntimes,
+    createDowntime as createDowntimeApi,
+    deleteDowntime as deleteDowntimeApi,
+} from '../../api/adapters/downtime';
 import {
     getBookingPolicy,
     updateBookingPolicy,
@@ -112,6 +118,10 @@ const Settings = () => {
     const [facility, setFacility] = useState<FacilityInfo>({
         bio: '',
         amenities: [],
+        address: '',
+        phone: '',
+        latitude: '',
+        longitude: '',
     });
 
     // ── Loading / saving flags ──
@@ -119,13 +129,16 @@ const Settings = () => {
     const [savingHours, setSavingHours] = useState(false);
     const [savingPeak, setSavingPeak] = useState(false);
     const [savingFacility, setSavingFacility] = useState(false);
-    const [bookingPolicy, setBookingPolicy] = useState<BookingPolicyModel | null>(null);
+    const [bookingPolicy, setBookingPolicy] =
+        useState<BookingPolicyModel | null>(null);
     const [loadingPolicy, setLoadingPolicy] = useState(false);
     const [savingPolicy, setSavingPolicy] = useState(false);
-    const [policyDraft, setPolicyDraft] = useState<UpdateBookingPolicyPayload>({});
+    const [policyDraft, setPolicyDraft] = useState<UpdateBookingPolicyPayload>(
+        {},
+    );
 
     // ── Local UI state ──
-    const [downtimes] = useState<ScheduledDowntime[]>([]);
+    const [downtimes, setDowntimes] = useState<ScheduledDowntime[]>([]);
     const [editingCourtId, setEditingCourtId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<CourtData | null>(null);
     const [deleteCourtId, setDeleteCourtId] = useState<string | null>(null);
@@ -135,6 +148,8 @@ const Settings = () => {
         courtId: '',
         startDate: '',
         endDate: '',
+        startTime: '',
+        endTime: '',
         reason: '',
     });
     const [newCourt, setNewCourt] = useState<Omit<CourtData, 'id'>>({
@@ -247,9 +262,30 @@ const Settings = () => {
                 amenities: amenitiesRes.data.amenities.map(
                     (a: AmenityModel) => a.name,
                 ),
+                address: venueRes.data.venue.address ?? '',
+                phone: venueRes.data.venue.phone ?? '',
+                latitude:
+                    venueRes.data.venue.latitude != null
+                        ? String(venueRes.data.venue.latitude)
+                        : '',
+                longitude:
+                    venueRes.data.venue.longitude != null
+                        ? String(venueRes.data.venue.longitude)
+                        : '',
             });
         } catch {
             toast.error('Failed to load amenities');
+        }
+    }, []);
+
+    const fetchDowntimes = useCallback(async () => {
+        try {
+            const res = (await listDowntimes()) as {
+                data: { downtimes: ScheduledDowntime[] };
+            };
+            setDowntimes(res.data.downtimes);
+        } catch {
+            toast.error('Failed to load downtimes');
         }
     }, []);
 
@@ -287,7 +323,8 @@ const Settings = () => {
         fetchHours();
         fetchAmenities();
         fetchPolicy();
-    }, [fetchCourts, fetchHours, fetchAmenities, fetchPolicy]);
+        fetchDowntimes();
+    }, [fetchCourts, fetchHours, fetchAmenities, fetchPolicy, fetchDowntimes]);
 
     useEffect(() => {
         if (courtsRaw.length) fetchPeakHours();
@@ -449,46 +486,58 @@ const Settings = () => {
             // All courts grouped by display-sport
             const courtsBySportDisplay: Record<string, string[]> = {};
             for (const c of courtsRaw) {
-                const displaySport = c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
-                if (!courtsBySportDisplay[displaySport]) courtsBySportDisplay[displaySport] = [];
+                const displaySport =
+                    c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
+                if (!courtsBySportDisplay[displaySport])
+                    courtsBySportDisplay[displaySport] = [];
                 courtsBySportDisplay[displaySport].push(c.id);
             }
 
             await Promise.all(
                 peakConfigs.flatMap((c) =>
-                    c.slots.filter((s) => s.startTime && s.endTime).flatMap((s) => {
-                        const isNewSlot = /^p\d+$/.test(s.id);
-                        if (isNewSlot) {
-                            const courtIds = courtsBySportDisplay[c.sport] ?? [];
-                            // Create one record per court × per selected day
-                            return courtIds.flatMap((courtId) => {
-                                if (s.days.length === 0) {
-                                    return [createPeakHourPricing({
-                                        courtId,
-                                        startTime: s.startTime,
-                                        endTime: s.endTime,
-                                        pricePerSlot: c.peakPrice,
-                                    })];
-                                }
-                                return s.days.map((day) => {
-                                    const dayOfWeek = SHORT_DAYS.indexOf(day);
-                                    return createPeakHourPricing({
-                                        courtId,
-                                        startTime: s.startTime,
-                                        endTime: s.endTime,
-                                        pricePerSlot: c.peakPrice,
-                                        ...(dayOfWeek >= 0 ? { dayOfWeek } : {}),
+                    c.slots
+                        .filter((s) => s.startTime && s.endTime)
+                        .flatMap((s) => {
+                            const isNewSlot = /^p\d+$/.test(s.id);
+                            if (isNewSlot) {
+                                const courtIds =
+                                    courtsBySportDisplay[c.sport] ?? [];
+                                // Create one record per court × per selected day
+                                return courtIds.flatMap((courtId) => {
+                                    if (s.days.length === 0) {
+                                        return [
+                                            createPeakHourPricing({
+                                                courtId,
+                                                startTime: s.startTime,
+                                                endTime: s.endTime,
+                                                pricePerSlot: c.peakPrice,
+                                            }),
+                                        ];
+                                    }
+                                    return s.days.map((day) => {
+                                        const dayOfWeek =
+                                            SHORT_DAYS.indexOf(day);
+                                        return createPeakHourPricing({
+                                            courtId,
+                                            startTime: s.startTime,
+                                            endTime: s.endTime,
+                                            pricePerSlot: c.peakPrice,
+                                            ...(dayOfWeek >= 0
+                                                ? { dayOfWeek }
+                                                : {}),
+                                        });
                                     });
                                 });
-                            });
-                        }
-                        // Existing record — update time/price (day fixed per record)
-                        return [updatePeakHourPricing(s.id, {
-                            startTime: s.startTime,
-                            endTime: s.endTime,
-                            pricePerSlot: c.peakPrice,
-                        })];
-                    }),
+                            }
+                            // Existing record — update time/price (day fixed per record)
+                            return [
+                                updatePeakHourPricing(s.id, {
+                                    startTime: s.startTime,
+                                    endTime: s.endTime,
+                                    pricePerSlot: c.peakPrice,
+                                }),
+                            ];
+                        }),
                 ),
             );
 
@@ -630,22 +679,51 @@ const Settings = () => {
         }
     };
 
-    // ── Downtime (local only — no API yet) ────────────────────────────────────
-    const addDowntimeEntry = () => {
+    // ── Downtime ──────────────────────────────────────────────────────────────
+    const addDowntimeEntry = async () => {
         if (
             !newDowntime.courtId ||
             !newDowntime.startDate ||
+            !newDowntime.startTime ||
+            !newDowntime.endTime ||
             !newDowntime.reason.trim()
         ) {
-            toast.error('Court, date & reason required');
+            toast.error('Court, date, time range & reason required');
             return;
         }
-        setShowAddDowntime(null);
-        setNewDowntime({ courtId: '', startDate: '', endDate: '', reason: '' });
-        toast.success('Downtime scheduled');
+        try {
+            await createDowntimeApi({
+                courtId: newDowntime.courtId,
+                startDate: newDowntime.startDate,
+                endDate: newDowntime.endDate || newDowntime.startDate,
+                startTime: newDowntime.startTime,
+                endTime: newDowntime.endTime,
+                reason: newDowntime.reason,
+            });
+            setShowAddDowntime(null);
+            setNewDowntime({
+                courtId: '',
+                startDate: '',
+                endDate: '',
+                startTime: '',
+                endTime: '',
+                reason: '',
+            });
+            toast.success('Downtime scheduled');
+            fetchDowntimes();
+        } catch {
+            toast.error('Failed to schedule downtime');
+        }
     };
-    const removeDowntime = (_id: string) => {
-        toast.success('Downtime removed');
+
+    const removeDowntime = async (id: string) => {
+        try {
+            await deleteDowntimeApi(id);
+            setDowntimes((prev) => prev.filter((d) => d.id !== id));
+            toast.success('Downtime removed');
+        } catch {
+            toast.error('Failed to remove downtime');
+        }
     };
 
     // ── Facility / Amenities ──────────────────────────────────────────────────
@@ -685,6 +763,16 @@ const Settings = () => {
         try {
             // Amenity toggles are saved individually on tap.
             await updateVenueDescription(facility.bio);
+            await updateVenueInfo({
+                address: facility.address || undefined,
+                phone: facility.phone || undefined,
+                latitude: facility.latitude
+                    ? parseFloat(facility.latitude)
+                    : undefined,
+                longitude: facility.longitude
+                    ? parseFloat(facility.longitude)
+                    : undefined,
+            });
             toast.success('Facility info saved');
         } catch {
             toast.error('Failed to save facility info');
@@ -783,6 +871,8 @@ const Settings = () => {
                                 courtId: '',
                                 startDate: '',
                                 endDate: '',
+                                startTime: '',
+                                endTime: '',
                                 reason: '',
                             });
                         }}
@@ -799,6 +889,9 @@ const Settings = () => {
                         onBioChange={(bio) =>
                             setFacility((p) => ({ ...p, bio }))
                         }
+                        onFieldChange={(field, value) =>
+                            setFacility((p) => ({ ...p, [field]: value }))
+                        }
                         onToggleAmenity={toggleAmenity}
                         onSave={saveFacility}
                         saving={savingFacility}
@@ -810,23 +903,34 @@ const Settings = () => {
                             bookingPolicy
                                 ? {
                                       ...bookingPolicy,
-                                      ...(policyDraft.advanceBookingDays !== undefined && {
-                                          adavanceBookingDays: policyDraft.advanceBookingDays,
+                                      ...(policyDraft.advanceBookingDays !==
+                                          undefined && {
+                                          adavanceBookingDays:
+                                              policyDraft.advanceBookingDays,
                                       }),
-                                      ...(policyDraft.minimumNoticeMinutes !== undefined && {
-                                          minimumNoticeMinutes: policyDraft.minimumNoticeMinutes,
+                                      ...(policyDraft.minimumNoticeMinutes !==
+                                          undefined && {
+                                          minimumNoticeMinutes:
+                                              policyDraft.minimumNoticeMinutes,
                                       }),
-                                      ...(policyDraft.minimumSlotMinutes !== undefined && {
-                                          minimumSlotMinutes: policyDraft.minimumSlotMinutes,
+                                      ...(policyDraft.minimumSlotMinutes !==
+                                          undefined && {
+                                          minimumSlotMinutes:
+                                              policyDraft.minimumSlotMinutes,
                                       }),
-                                      ...(policyDraft.cancellationPolicy !== undefined && {
-                                          cancellationPolicy: policyDraft.cancellationPolicy,
+                                      ...(policyDraft.cancellationPolicy !==
+                                          undefined && {
+                                          cancellationPolicy:
+                                              policyDraft.cancellationPolicy,
                                       }),
-                                      ...(policyDraft.autoConfirm !== undefined && {
+                                      ...(policyDraft.autoConfirm !==
+                                          undefined && {
                                           autoConfirm: policyDraft.autoConfirm,
                                       }),
-                                      ...(policyDraft.maxBookingsPerPlayerDay !== undefined && {
-                                          maxBookingsPerPlayerDay: policyDraft.maxBookingsPerPlayerDay,
+                                      ...(policyDraft.maxBookingsPerPlayerDay !==
+                                          undefined && {
+                                          maxBookingsPerPlayerDay:
+                                              policyDraft.maxBookingsPerPlayerDay,
                                       }),
                                   }
                                 : null
