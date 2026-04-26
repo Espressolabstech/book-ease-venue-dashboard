@@ -478,7 +478,7 @@ const ListBookings = () => {
                                 {selectedBooking.payment && (
                                     <div className="flex items-center gap-2 text-sm">
                                         <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
-                                        <span>₹{selectedBooking.finalAmount} · {paymentMethodLabel[selectedBooking.payment.paymentMethod] ?? selectedBooking.payment.paymentMethod} · {selectedBooking.payment.paymentStatus}</span>
+                                        <span>₹{Number(selectedBooking.payment.amount).toLocaleString('en-IN')} · {paymentMethodLabel[selectedBooking.payment.paymentMethod] ?? selectedBooking.payment.paymentMethod} · {selectedBooking.payment.paymentStatus}</span>
                                     </div>
                                 )}
                             </div>

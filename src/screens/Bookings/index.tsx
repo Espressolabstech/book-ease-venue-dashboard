@@ -4,14 +4,20 @@ import { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { cn, formatTime } from '../../utils/twMerge';
 import {
+    AlertTriangle,
     ArrowLeft,
+    Calendar,
     Check,
     CheckCircle2,
     ChevronRight,
+    Clock,
+    CreditCard,
     Loader2,
     Search,
     Share2,
+    User,
     UserPlus,
+    XCircle,
 } from 'lucide-react';
 import { DateStrip } from '../../components/DateStrip';
 import { Label } from '../../components/ui/label';
@@ -26,14 +32,35 @@ import { ScrollArea, ScrollBar } from '../../components/ui/scroll-area';
 import { getCourts } from '../../api/adapters/courts';
 import {
     addPlayer,
+    cancelBooking,
     getAvailableSlots,
     getPlayerVenueWallet,
+    listVenueBookings,
     listVenuePlayers,
     managerCreateBooking,
     verifyBookingPayment,
 } from '../../api/adapters/bookings';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { Badge } from '../../components/ui/badge';
 import { loadRazorpayScript, openRazorpayCheckout } from '../../utils/razorpay';
 import { path } from '../../navigation/commanPaths';
+
+const bookingStatusColors: Record<BookingStatus, string> = {
+    PENDING: 'bg-amber-100 text-amber-800',
+    CONFIRMED: 'bg-green-100 text-green-800',
+    COMPLETED: 'bg-blue-100 text-blue-800',
+    CANCELLED: 'bg-red-100 text-red-800',
+    NO_SHOW: 'bg-gray-100 text-gray-600',
+};
+
+const paymentMethodLabel: Record<string, string> = {
+    CASH: 'Cash',
+    WALLET: 'Wallet',
+    UPI: 'UPI',
+    CARD: 'Card',
+    NET_BANKING: 'Net Banking',
+};
 
 const Booking = () => {
     const navigate = useNavigate();
@@ -90,6 +117,11 @@ const Booking = () => {
     >({});
     const [slotsLoading, setSlotsLoading] = useState(false);
     const [bookedResult, setBookedResult] = useState<BookingModel | null>(null);
+    const [venueBookings, setVenueBookings] = useState<BookingModel[]>([]);
+    const [selectedBookedSlot, setSelectedBookedSlot] = useState<{ courtId: string; startTime: string } | null>(null);
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
 
     // Fetch courts once
     useEffect(() => {
@@ -153,6 +185,13 @@ const Booking = () => {
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
+    // Fetch all venue bookings for the selected date (for player names on booked slots)
+    useEffect(() => {
+        listVenueBookings({ date: dateStr, limit: 100 })
+            .then((res) => setVenueBookings(res.data.bookings))
+            .catch(() => setVenueBookings([]));
+    }, [dateStr]);
+
     // Fetch real slot availability whenever visible courts or date changes
     useEffect(() => {
         if (!filteredCourts.length) return;
@@ -174,7 +213,9 @@ const Booking = () => {
                             status:
                                 s.status === 'available'
                                     ? 'available'
-                                    : 'booked',
+                                    : s.status === 'downtime'
+                                      ? 'blocked'
+                                      : 'booked',
                         }));
                     return [
                         c.id,
@@ -212,7 +253,7 @@ const Booking = () => {
             cancelled = true;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filteredCourts.map((c) => c.id).join(','), dateStr]);
+    }, [filteredCourts.map((c) => c.id).join(','), dateStr, slotsRefreshKey]);
 
     const courtSlots = useMemo(
         () =>
@@ -265,7 +306,14 @@ const Booking = () => {
         const slot = (courtSlotsData[courtId] ?? []).find(
             (s) => s.id === slotId,
         );
-        if (!slot || slot.status !== 'available') return;
+        if (!slot) return;
+
+        if (slot.status === 'booked') {
+            setSelectedBookedSlot({ courtId, startTime: slot.start_time });
+            return;
+        }
+
+        if (slot.status !== 'available') return;
 
         if (selectedCourt !== courtId) {
             setSelectedCourt(courtId);
@@ -287,6 +335,41 @@ const Booking = () => {
             setSelectedSlots([...selectedSlots, slotId]);
         } else {
             setSelectedSlots([slotId]);
+        }
+    };
+
+    const selectedBookedBooking = useMemo(() => {
+        if (!selectedBookedSlot) return null;
+        return venueBookings.find(
+            (b) =>
+                b.courtId === selectedBookedSlot.courtId &&
+                b.startTime === selectedBookedSlot.startTime &&
+                b.status !== 'CANCELLED',
+        ) ?? null;
+    }, [selectedBookedSlot, venueBookings]);
+
+    const getPlayerNameForSlot = (courtId: string, startTime: string): string | null => {
+        const booking = venueBookings.find(
+            (b) => b.courtId === courtId && b.startTime === startTime && b.status !== 'CANCELLED',
+        );
+        return booking?.user?.name ?? booking?.user?.phone ?? null;
+    };
+
+    const handleCancelBooking = async () => {
+        if (!selectedBookedBooking) return;
+        setCancelLoading(true);
+        try {
+            await cancelBooking(selectedBookedBooking.id, { cancelReason: 'Cancelled by venue' });
+            const res = await listVenueBookings({ date: dateStr, limit: 100 });
+            setVenueBookings(res.data.bookings);
+            setSlotsRefreshKey((k) => k + 1);
+            setCancelDialogOpen(false);
+            setSelectedBookedSlot(null);
+            toast({ title: 'Booking cancelled successfully' });
+        } catch {
+            toast({ title: 'Unable to cancel this booking', variant: 'destructive' });
+        } finally {
+            setCancelLoading(false);
         }
     };
 
@@ -366,6 +449,7 @@ const Booking = () => {
                     endTime: s.end_time,
                 })),
                 paymentMethod: toApiPaymentMethod(paymentMethod),
+                ...(paymentMethod === 'cash' && { amount: courtFee }),
             });
 
             // Mark selected slots as booked optimistically
@@ -600,7 +684,7 @@ const Booking = () => {
                                                             <button
                                                                 key={`${c.id}-${slot.id}`}
                                                                 disabled={
-                                                                    !isAvailable
+                                                                    slot.status === 'blocked'
                                                                 }
                                                                 onClick={() =>
                                                                     handleSlotTap(
@@ -609,7 +693,7 @@ const Booking = () => {
                                                                     )
                                                                 }
                                                                 className={cn(
-                                                                    'flex-1 min-w-[72px] h-12 rounded-md text-center text-xs font-medium transition-all flex flex-col items-center justify-center',
+                                                                    'flex-1 min-w-[72px] h-12 rounded-md text-center text-xs font-medium transition-all flex flex-col items-center justify-center overflow-hidden px-1',
                                                                     isAvailable &&
                                                                         !isSelected &&
                                                                         'bg-success/10 text-success border border-success/30 hover:bg-success/20',
@@ -617,18 +701,17 @@ const Booking = () => {
                                                                         'bg-primary text-primary-foreground border border-primary shadow-sm',
                                                                     slot.status ===
                                                                         'booked' &&
-                                                                        'bg-muted text-muted-foreground border border-border cursor-not-allowed opacity-60',
+                                                                        'bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20',
                                                                     slot.status ===
                                                                         'blocked' &&
                                                                         'bg-muted/50 text-muted-foreground/50 border border-border/50 cursor-not-allowed',
                                                                 )}
                                                             >
-                                                                <span>
+                                                                <span className="truncate w-full text-center leading-tight">
                                                                     {isAvailable
                                                                         ? 'Open'
-                                                                        : slot.status ===
-                                                                            'booked'
-                                                                          ? 'Booked'
+                                                                        : slot.status === 'booked'
+                                                                          ? (getPlayerNameForSlot(c.id, slot.start_time)?.split(' ')[0] ?? 'Booked')
                                                                           : '—'}
                                                                 </span>
                                                                 {isAvailable && (
@@ -1211,6 +1294,127 @@ const Booking = () => {
                     )}
                 </div>
             </div>
+
+            {/* Booked slot detail sheet */}
+            <Sheet
+                open={!!selectedBookedSlot}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedBookedSlot(null);
+                        setCancelDialogOpen(false);
+                    }
+                }}
+            >
+                <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+                    <SheetHeader className="mb-4">
+                        <SheetTitle>Booking Details</SheetTitle>
+                    </SheetHeader>
+
+                    {selectedBookedBooking ? (
+                        <div className="space-y-4 pb-8">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="font-semibold text-foreground">{selectedBookedBooking.court?.name}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedBookedBooking.venue?.name}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {selectedBookedBooking.isOtcActive && (
+                                        <Badge className="bg-violet-100 text-violet-700 border-violet-200 text-[10px]">OTC</Badge>
+                                    )}
+                                    <Badge className={bookingStatusColors[selectedBookedBooking.status] ?? ''}>
+                                        {selectedBookedBooking.status.replace(/_/g, ' ')}
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 rounded-lg bg-muted/40 p-3">
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span>{format(new Date(selectedBookedBooking.bookingDate), 'EEEE, MMMM d, yyyy')}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                    <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span>{formatTime(selectedBookedBooking.startTime)} – {formatTime(selectedBookedBooking.endTime)}</span>
+                                </div>
+                                {selectedBookedBooking.user && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <span>{selectedBookedBooking.user.name || 'Guest'} · {selectedBookedBooking.user.countryCode}{selectedBookedBooking.user.phone}</span>
+                                    </div>
+                                )}
+                                {selectedBookedBooking.payment && (
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <CreditCard className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <span>₹{Number(selectedBookedBooking.payment.amount).toLocaleString('en-IN')} · {paymentMethodLabel[selectedBookedBooking.payment.paymentMethod] ?? selectedBookedBooking.payment.paymentMethod} · {selectedBookedBooking.payment.paymentStatus}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {selectedBookedBooking.isOtcActive && (
+                                <div className="rounded-lg bg-violet-50 border border-violet-200 px-3 py-2 text-xs text-violet-700">
+                                    Open to Cancel — this slot will auto-release and the player will be refunded if someone else books it.
+                                </div>
+                            )}
+
+                            {(selectedBookedBooking.status === 'CONFIRMED' || selectedBookedBooking.status === 'PENDING') && (
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-destructive/40 text-destructive hover:bg-destructive/5"
+                                    onClick={() => setCancelDialogOpen(true)}
+                                >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Cancel Booking
+                                </Button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="py-8 text-center text-sm text-muted-foreground">
+                            Loading booking details…
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Cancel confirmation dialog */}
+            <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                            Cancel Booking?
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedBookedBooking && (
+                                <>
+                                    Cancel booking for{' '}
+                                    <span className="font-medium text-foreground">
+                                        {selectedBookedBooking.user?.name || 'Guest'}
+                                    </span>{' '}
+                                    on {format(new Date(selectedBookedBooking.bookingDate), 'EEE, MMM d')} at {formatTime(selectedBookedBooking.startTime)}?
+                                    {' '}Any applicable refund will be processed automatically.
+                                </>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button
+                            variant="outline"
+                            onClick={() => setCancelDialogOpen(false)}
+                            disabled={cancelLoading}
+                        >
+                            Keep Booking
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleCancelBooking}
+                            disabled={cancelLoading}
+                        >
+                            {cancelLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                            Yes, Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
     BarChart3,
-    CalendarDays,
     Loader2,
     Plus,
     Settings,
@@ -15,12 +14,6 @@ import { listVenueBookings } from '../../api/adapters/bookings';
 import { cn, formatTime } from '../../utils/twMerge';
 
 const menuItems = [
-    {
-        icon: CalendarDays,
-        label: 'Bookings',
-        path: path.listBooking,
-        color: 'bg-primary/10 text-primary',
-    },
     {
         icon: Users,
         label: 'Players',

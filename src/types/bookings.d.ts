@@ -113,6 +113,7 @@ declare global {
         slots: { startTime: string; endTime: string }[];
         paymentMethod: ApiPaymentMethod;
         notes?: string;
+        amount?: number;
     }
 
     interface CashPaymentPayload {
@@ -193,7 +194,7 @@ declare global {
     interface AvailableSlotItem {
         startTime: string;
         endTime: string;
-        status: 'available' | 'booked' | 'pending';
+        status: 'available' | 'booked' | 'pending' | 'downtime';
     }
 
     interface AvailableSlotsResponse {
