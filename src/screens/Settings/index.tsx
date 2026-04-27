@@ -30,7 +30,6 @@ import { listVenueHours, saveVenueHour } from '../../api/adapters/venueHours';
 import {
     listPeakHourPricings,
     createPeakHourPricing,
-    updatePeakHourPricing,
     deletePeakHourPricing,
 } from '../../api/adapters/peakHourPricing';
 import { updateCourtPricing } from '../../api/adapters/courtPricing';
@@ -209,25 +208,58 @@ const Settings = () => {
                 ),
             );
 
-            // One config per display-sport; last court of that sport wins for
-            // offPeakPrice (they should all be the same)
+            // One config per display-sport.
+            // Merge peaks from ALL courts (not just the first) so that if court 1
+            // has no peaks but court 2 does, we still see them. Deduplicate by
+            // startTime|endTime|dayOfWeek so multiple courts don't create duplicate rows.
             const bySport: Record<string, SportPeakConfig> = {};
             for (const { sport, offPeakPrice, peaks } of allPeaks) {
                 if (!bySport[sport]) {
                     bySport[sport] = {
                         sport,
                         offPeakPrice,
-                        peakPrice: peaks[0]?.pricePerSlot ?? 0,
-                        slots: peaks.map((p) => ({
+                        peakPrice: 0,
+                        slots: [],
+                    };
+                }
+                const config = bySport[sport];
+                // Use the first non-empty court's prices as representative
+                if (peaks.length > 0 && config.peakPrice === 0) {
+                    config.peakPrice = peaks[0].pricePerSlot;
+                    config.offPeakPrice = offPeakPrice;
+                }
+                // Build a dedup key per unique {startTime, endTime, dayOfWeek}
+                const seen = new Set(
+                    config.slots.map(
+                        (s) => `${s.startTime}|${s.endTime}|${s.days[0] ?? ''}`,
+                    ),
+                );
+                for (const p of peaks) {
+                    const dayStr =
+                        p.dayOfWeek !== null ? SHORT_DAYS[p.dayOfWeek] : '';
+                    const key = `${p.startTime}|${p.endTime}|${dayStr}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        config.slots.push({
                             id: p.id,
                             startTime: p.startTime,
                             endTime: p.endTime,
+                            // dayOfWeek null means "all days" — expand so UI shows
+                            // all days highlighted instead of none
                             days:
                                 p.dayOfWeek !== null
                                     ? [SHORT_DAYS[p.dayOfWeek]]
-                                    : [],
-                        })),
-                    };
+                                    : [
+                                          'Mon',
+                                          'Tue',
+                                          'Wed',
+                                          'Thu',
+                                          'Fri',
+                                          'Sat',
+                                          'Sun',
+                                      ],
+                        });
+                    }
                 }
             }
 
@@ -445,8 +477,9 @@ const Settings = () => {
         );
     };
 
-    const removePeakSlot = async (sport: string, slotId: string) => {
-        // Optimistic remove
+    const removePeakSlot = (sport: string, slotId: string) => {
+        // Only update local state — save uses full replace so it will delete
+        // all DB records (across every court) and recreate from current state.
         setPeakConfigs((prev) =>
             prev.map((c) =>
                 c.sport === sport
@@ -454,16 +487,6 @@ const Settings = () => {
                     : c,
             ),
         );
-        // Only hit API for persisted IDs (temp IDs start with 'p' followed by a timestamp)
-        const isTempId = /^p\d+$/.test(slotId);
-        if (!isTempId) {
-            try {
-                await deletePeakHourPricing(slotId);
-            } catch {
-                toast.error('Failed to delete peak slot');
-                fetchPeakHours(); // Revert on error
-            }
-        }
     };
 
     const togglePeakDay = (sport: string, slotId: string, day: string) => {
@@ -493,53 +516,45 @@ const Settings = () => {
                 courtsBySportDisplay[displaySport].push(c.id);
             }
 
-            await Promise.all(
-                peakConfigs.flatMap((c) =>
-                    c.slots
-                        .filter((s) => s.startTime && s.endTime)
-                        .flatMap((s) => {
-                            const isNewSlot = /^p\d+$/.test(s.id);
-                            if (isNewSlot) {
-                                const courtIds =
-                                    courtsBySportDisplay[c.sport] ?? [];
-                                // Create one record per court × per selected day
-                                return courtIds.flatMap((courtId) => {
-                                    if (s.days.length === 0) {
-                                        return [
-                                            createPeakHourPricing({
-                                                courtId,
-                                                startTime: s.startTime,
-                                                endTime: s.endTime,
-                                                pricePerSlot: c.peakPrice,
-                                            }),
-                                        ];
-                                    }
-                                    return s.days.map((day) => {
-                                        const dayOfWeek =
-                                            SHORT_DAYS.indexOf(day);
-                                        return createPeakHourPricing({
-                                            courtId,
-                                            startTime: s.startTime,
-                                            endTime: s.endTime,
-                                            pricePerSlot: c.peakPrice,
-                                            ...(dayOfWeek >= 0
-                                                ? { dayOfWeek }
-                                                : {}),
-                                        });
-                                    });
-                                });
-                            }
-                            // Existing record — update time/price (day fixed per record)
-                            return [
-                                updatePeakHourPricing(s.id, {
+            // Full replace: for each sport, delete ALL existing peak records
+            // across ALL courts, then create fresh records from current state.
+            // This ensures day changes persist and all courts stay in sync.
+            for (const config of peakConfigs) {
+                const courtIds = courtsBySportDisplay[config.sport] ?? [];
+
+                // Fetch and delete every existing active record for all courts
+                const existingResults = await Promise.all(
+                    courtIds.map((id) => listPeakHourPricings({ courtId: id })),
+                );
+                const allExistingIds = existingResults.flatMap((r) =>
+                    r.data.peakHourPricings.map((p) => p.id),
+                );
+                await Promise.all(
+                    allExistingIds.map((id) => deletePeakHourPricing(id)),
+                );
+
+                // Create one record per court × per slot × per selected day.
+                // Skip slots with no days or no times (incomplete entries).
+                const validSlots = config.slots.filter(
+                    (s) => s.startTime && s.endTime && s.days.length > 0,
+                );
+                await Promise.all(
+                    courtIds.flatMap((courtId) =>
+                        validSlots.flatMap((s) =>
+                            s.days.map((day) => {
+                                const dayOfWeek = SHORT_DAYS.indexOf(day);
+                                return createPeakHourPricing({
+                                    courtId,
                                     startTime: s.startTime,
                                     endTime: s.endTime,
-                                    pricePerSlot: c.peakPrice,
-                                }),
-                            ];
-                        }),
-                ),
-            );
+                                    pricePerSlot: config.peakPrice,
+                                    ...(dayOfWeek >= 0 ? { dayOfWeek } : {}),
+                                });
+                            }),
+                        ),
+                    ),
+                );
+            }
 
             // Also update offPeakPrice (base court pricing) for each sport
             await Promise.all(

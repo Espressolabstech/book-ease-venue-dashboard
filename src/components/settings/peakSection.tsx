@@ -45,11 +45,12 @@ function findConflictingKeys(groups: GroupMeta[]): Set<string> {
             const b = groups[j];
             if (!a.startTime || !a.endTime || !b.startTime || !b.endTime) continue;
 
-            // Day overlap — empty days array means "all days"
-            const aAll = a.activeDays.size === 0;
-            const bAll = b.activeDays.size === 0;
-            const sharedDay =
-                aAll || bAll || [...a.activeDays].some((d) => b.activeDays.has(d));
+            // A window with no days selected is incomplete — skip it from
+            // conflict detection (it will be caught by the no-days validator).
+            if (a.activeDays.size === 0 || b.activeDays.size === 0) continue;
+
+            // Day overlap
+            const sharedDay = [...a.activeDays].some((d) => b.activeDays.has(d));
             if (!sharedDay) continue;
 
             // Time overlap
@@ -106,7 +107,7 @@ const PeakSection = ({
         keys.forEach((k) => allConflictKeys.add(k));
     }
 
-    // Also flag windows where start >= end
+    // Flag windows where start >= end
     const invalidTimeKeys = new Set<string>();
     for (const config of peakConfigs) {
         for (const group of groupSlotsByTime(config.slots)) {
@@ -118,7 +119,21 @@ const PeakSection = ({
         }
     }
 
-    const hasErrors = allConflictKeys.size > 0 || invalidTimeKeys.size > 0;
+    // Flag windows where no days are selected (incomplete, can't save)
+    const noDaysKeys = new Set<string>();
+    for (const config of peakConfigs) {
+        for (const group of groupSlotsByTime(config.slots)) {
+            const rep = group[0];
+            const activeDays = new Set(group.flatMap((s) => s.days));
+            if (activeDays.size === 0 && rep.startTime && rep.endTime) {
+                const key = isTempId(rep.id) ? rep.id : `${rep.startTime}-${rep.endTime}`;
+                noDaysKeys.add(key);
+            }
+        }
+    }
+
+    const hasErrors =
+        allConflictKeys.size > 0 || invalidTimeKeys.size > 0 || noDaysKeys.size > 0;
 
     const handleSave = () => {
         if (hasErrors) return;
@@ -213,12 +228,13 @@ const PeakSection = ({
                                             rep.startTime &&
                                             rep.endTime &&
                                             toMinutes(rep.startTime) >= toMinutes(rep.endTime);
+                                        const isNoDays = noDaysKeys.has(groupKey);
 
                                         return (
                                             <div
                                                 key={groupKey}
                                                 className={`space-y-2 rounded-lg border p-3 ${
-                                                    isConflict || isInvalidTime
+                                                    isConflict || isInvalidTime || isNoDays
                                                         ? 'border-destructive/60 bg-destructive/5'
                                                         : 'border-border'
                                                 }`}
@@ -234,6 +250,12 @@ const PeakSection = ({
                                                     <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
                                                         <AlertTriangle className="h-3 w-3" />
                                                         Overlaps with another window on a shared day
+                                                    </p>
+                                                )}
+                                                {isNoDays && !isInvalidTime && !isConflict && (
+                                                    <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
+                                                        <AlertTriangle className="h-3 w-3" />
+                                                        Select at least one day
                                                     </p>
                                                 )}
 
@@ -321,7 +343,7 @@ const PeakSection = ({
 
             {hasErrors && (
                 <p className="text-center text-xs text-destructive font-medium">
-                    Fix all conflicts and invalid times before saving.
+                    Fix all conflicts, invalid times, and missing days before saving.
                 </p>
             )}
 
