@@ -95,4 +95,10 @@ export const endpoints = {
     listDowntimes: '/downtime/list',
     createDowntime: '/downtime/create',
     deleteDowntime: (id: string) => `/downtime/${id}/delete`,
+
+    // Venue staff endpoints
+    listStaff: '/venue/staff',
+    addStaff: '/venue/staff/add',
+    updateStaffRole: (id: string) => `/venue/staff/${id}/role`,
+    removeStaff: (id: string) => `/venue/staff/${id}`,
 };

@@ -5,7 +5,11 @@ import { useMutation } from '@tanstack/react-query';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { managerLogin, resendOtp, verifyOtp } from '../../api/adapters/auth';
-import { setToken } from '../../utils/cookies.helpers';
+import {
+    setToken,
+    setUserId,
+    setVenueStaffRole,
+} from '../../utils/cookies.helpers';
 import { toast } from 'sonner';
 import { path } from '../../navigation/commanPaths';
 import { isOnBoarded } from '../../api/adapters/onBoard';
@@ -44,6 +48,10 @@ const Login = () => {
         mutationFn: (data: VerifyOtp) => verifyOtp(data),
         onSuccess: async (data) => {
             setToken(data.data.token);
+            setUserId(data.data.id);
+            if (data.data.venueStaffRole) {
+                setVenueStaffRole(data.data.venueStaffRole);
+            }
             toast.success('Login successful!');
 
             const inviteVenueId = sessionStorage.getItem('inviteVenueId');

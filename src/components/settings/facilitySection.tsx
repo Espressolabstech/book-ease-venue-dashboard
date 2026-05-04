@@ -14,6 +14,7 @@ const FacilitySection = ({
     onFieldChange,
     onSave,
     saving,
+    readOnly = false,
 }: {
     facility: FacilityInfo;
     onBioChange: (bio: string) => void;
@@ -21,6 +22,7 @@ const FacilitySection = ({
     onFieldChange: (field: keyof FacilityInfo, value: string) => void;
     onSave: () => void;
     saving?: boolean;
+    readOnly?: boolean;
 }) => {
     return (
         <div className="space-y-4">
@@ -41,6 +43,7 @@ const FacilitySection = ({
                                 onFieldChange('phone', e.target.value)
                             }
                             placeholder="+91 98765 43210"
+                            disabled={readOnly}
                         />
                     </div>
 
@@ -54,6 +57,7 @@ const FacilitySection = ({
                             }
                             placeholder="Street, area, city…"
                             rows={2}
+                            disabled={readOnly}
                         />
                     </div>
 
@@ -82,6 +86,7 @@ const FacilitySection = ({
                                         )
                                     }
                                     placeholder="e.g. 28.6139"
+                                    disabled={readOnly}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -103,6 +108,7 @@ const FacilitySection = ({
                                         )
                                     }
                                     placeholder="e.g. 77.2090"
+                                    disabled={readOnly}
                                 />
                             </div>
                         </div>
@@ -126,6 +132,7 @@ const FacilitySection = ({
                         }
                         placeholder="Tell players about your facility..."
                         rows={4}
+                        disabled={readOnly}
                     />
                     <p
                         className={cn(
@@ -159,13 +166,15 @@ const FacilitySection = ({
                                         <button
                                             key={amenity}
                                             onClick={() =>
-                                                onToggleAmenity(amenity)
+                                                !readOnly && onToggleAmenity(amenity)
                                             }
+                                            disabled={readOnly}
                                             className={cn(
                                                 'rounded-full border px-4 py-1.5 text-sm font-medium transition-all',
                                                 active
                                                     ? 'border-[hsl(var(--admin-navy))] bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] scale-105'
                                                     : 'border-border text-foreground hover:border-muted-foreground',
+                                                readOnly && 'opacity-60 cursor-not-allowed',
                                             )}
                                         >
                                             {amenity}
@@ -178,14 +187,16 @@ const FacilitySection = ({
                 </CardContent>
             </Card>
 
-            <Button className="w-full" onClick={onSave} disabled={saving}>
-                {saving ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : (
-                    <Save className="mr-1.5 h-4 w-4" />
-                )}
-                Save Changes
-            </Button>
+            {!readOnly && (
+                <Button className="w-full" onClick={onSave} disabled={saving}>
+                    {saving ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    Save Changes
+                </Button>
+            )}
         </div>
     );
 };

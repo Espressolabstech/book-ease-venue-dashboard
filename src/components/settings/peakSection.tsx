@@ -78,6 +78,7 @@ const PeakSection = ({
     updatePrice,
     onSave,
     saving,
+    readOnly = false,
 }: {
     peakConfigs: SportPeakConfig[];
     addSlot: (sport: string) => void;
@@ -87,6 +88,7 @@ const PeakSection = ({
     updatePrice: (sport: string, field: 'peakPrice' | 'offPeakPrice', value: number) => void;
     onSave: () => void;
     saving?: boolean;
+    readOnly?: boolean;
 }) => {
     // Compute all conflicts across all sport configs
     const allConflictKeys = new Set<string>();
@@ -200,14 +202,16 @@ const PeakSection = ({
                                     <Label className="text-xs font-medium text-muted-foreground">
                                         Peak Time Windows
                                     </Label>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => addSlot(config.sport)}
-                                        className="h-7 text-xs"
-                                    >
-                                        <Plus className="mr-1 h-3 w-3" /> Add Window
-                                    </Button>
+                                    {!readOnly && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => addSlot(config.sport)}
+                                            className="h-7 text-xs"
+                                        >
+                                            <Plus className="mr-1 h-3 w-3" /> Add Window
+                                        </Button>
+                                    )}
                                 </div>
 
                                 {config.slots.length === 0 && (
@@ -290,16 +294,18 @@ const PeakSection = ({
                                                             className="h-8 text-xs"
                                                         />
                                                     </div>
-                                                    <button
-                                                        onClick={() =>
-                                                            group.forEach((s) =>
-                                                                removeSlot(config.sport, s.id)
-                                                            )
-                                                        }
-                                                        className="rounded p-1.5 hover:bg-destructive/10"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                                    </button>
+                                                    {!readOnly && (
+                                                        <button
+                                                            onClick={() =>
+                                                                group.forEach((s) =>
+                                                                    removeSlot(config.sport, s.id)
+                                                                )
+                                                            }
+                                                            className="rounded p-1.5 hover:bg-destructive/10"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                                        </button>
+                                                    )}
                                                 </div>
 
                                                 {/* Day toggles */}
@@ -341,20 +347,22 @@ const PeakSection = ({
                 );
             })}
 
-            {hasErrors && (
+            {!readOnly && hasErrors && (
                 <p className="text-center text-xs text-destructive font-medium">
                     Fix all conflicts, invalid times, and missing days before saving.
                 </p>
             )}
 
-            <Button className="w-full" onClick={handleSave} disabled={saving || hasErrors}>
-                {saving ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : (
-                    <Save className="mr-1.5 h-4 w-4" />
-                )}
-                Save Changes
-            </Button>
+            {!readOnly && (
+                <Button className="w-full" onClick={handleSave} disabled={saving || hasErrors}>
+                    {saving ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Save className="mr-1.5 h-4 w-4" />
+                    )}
+                    Save Changes
+                </Button>
+            )}
         </div>
     );
 };

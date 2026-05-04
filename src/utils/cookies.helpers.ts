@@ -24,6 +24,12 @@ export const removeToken = () => removeCookie('__token');
 export const setToken = (token: string) =>
     setCookie('__token', `%20${token}%20`);
 
+export const getVenueStaffRole = (): VenueStaffRole | null =>
+    getCookie('__venueStaffRole') ?? null;
+
+export const setVenueStaffRole = (role: VenueStaffRole) =>
+    setCookie('__venueStaffRole', role);
+
 export const clearCookies = () => {
     const allCookies = cookies.getAll();
 

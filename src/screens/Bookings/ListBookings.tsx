@@ -46,6 +46,8 @@ const ListBookings = () => {
     const [courtsLoading, setCourtsLoading] = useState(true);
     const [slotsData, setSlotsData] = useState<Record<string, SlotItem[]>>({});
     const [slotsLoading, setSlotsLoading] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+    const isBgRefreshRef = useRef(false);
     const [selectedSport, setSelectedSport] = useState<string>('');
     const [selectedCourt, setSelectedCourt] = useState('all');
     const courtScrollRef = useRef<HTMLDivElement>(null);
@@ -115,11 +117,14 @@ const ListBookings = () => {
         setSelectedCourt('all');
     }, [courtsForSport]);
 
-    // Fetch slots for all courts in selected sport when date changes
+    // Fetch slots for all courts in selected sport when date or refreshKey changes
     useEffect(() => {
         if (!courtsForSport.length) return;
         let cancelled = false;
-        setSlotsLoading(true);
+
+        // Suppress the loading spinner for silent background polls
+        if (!isBgRefreshRef.current) setSlotsLoading(true);
+        isBgRefreshRef.current = false;
 
         Promise.all(
             courtsForSport.map(async (c) => {
@@ -130,13 +135,15 @@ const ListBookings = () => {
                     const toSlots = (
                         items: AvailableSlotItem[],
                     ): SlotItem[] =>
-                        items.map((s) => ({
-                            id: `ts-${c.id}-${dateStr}-${s.startTime}`,
-                            courtId: c.id,
-                            startTime: s.startTime,
-                            endTime: s.endTime,
-                            status: s.status,
-                        }));
+                        items
+                            .filter((s) => s.status !== 'downtime')
+                            .map((s) => ({
+                                id: `ts-${c.id}-${dateStr}-${s.startTime}`,
+                                courtId: c.id,
+                                startTime: s.startTime,
+                                endTime: s.endTime,
+                                status: s.status as SlotItem['status'],
+                            }));
                     return [
                         c.id,
                         [
@@ -156,7 +163,7 @@ const ListBookings = () => {
         });
 
         return () => { cancelled = true; };
-    }, [courtsForSport, dateStr]);
+    }, [courtsForSport, dateStr, refreshKey]);
 
     const allCourtsSlots = useMemo(
         () =>
@@ -168,6 +175,19 @@ const ListBookings = () => {
     );
 
     const timeLabels = allCourtsSlots[0]?.slots.map((s) => s.startTime) ?? [];
+
+    // Poll every 30 s when any slot is in pending state so expired holds auto-clear
+    const hasPendingSlots = Object.values(slotsData).some((slots) =>
+        slots.some((s) => s.status === 'pending'),
+    );
+    useEffect(() => {
+        if (!hasPendingSlots) return;
+        const id = setInterval(() => {
+            isBgRefreshRef.current = true;
+            setRefreshKey((k) => k + 1);
+        }, 30_000);
+        return () => clearInterval(id);
+    }, [hasPendingSlots]);
 
     const getSlotColor = (status: SlotItem['status']) => {
         if (status === 'booked') return 'bg-destructive';

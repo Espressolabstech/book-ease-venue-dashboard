@@ -4,6 +4,7 @@ import { getToken } from './cookies.helpers';
 import { path } from '../../src/navigation/commanPaths';
 import { isOnBoarded } from '../api/adapters/onBoard';
 import Loader from '../components/ui/loader';
+import { canAccessSettings, useVenueRole } from '../hooks/useVenueRole';
 
 export const AuthWrapper = ({ children }: WrapperProps) => {
     return getToken() ? <Navigate to={path.dashboard} replace /> : children;
@@ -38,4 +39,18 @@ export const DashboardWrapper = ({ children }: WrapperProps) => {
     }
 
     return children;
+};
+
+// Blocks Court Assistants from settings, players, analytics, wallets
+export const VenueAdminOrManagerWrapper = ({ children }: WrapperProps) => {
+    if (!getToken()) return <Navigate to={path.login} replace />;
+    const role = useVenueRole();
+    return canAccessSettings(role) ? children : <Navigate to={path.dashboard} replace />;
+};
+
+// Blocks everyone except Venue Admin from wallets
+export const VenueAdminOnlyWrapper = ({ children }: WrapperProps) => {
+    if (!getToken()) return <Navigate to={path.login} replace />;
+    const role = useVenueRole();
+    return role === 'VENUE_ADMIN' ? children : <Navigate to={path.dashboard} replace />;
 };

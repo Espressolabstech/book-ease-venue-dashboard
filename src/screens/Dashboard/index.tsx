@@ -4,6 +4,7 @@ import {
     Loader2,
     Plus,
     Settings,
+    UserCog,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -12,13 +13,21 @@ import { Card, CardContent } from '../../components/ui/card';
 import { path } from '../../navigation/commanPaths';
 import { listVenueBookings } from '../../api/adapters/bookings';
 import { cn, formatTime } from '../../utils/twMerge';
+import { useVenueRole } from '../../hooks/useVenueRole';
 
-const menuItems = [
+const ALL_MENU_ITEMS: {
+    icon: React.ElementType;
+    label: string;
+    path: string;
+    color: string;
+    roles?: VenueStaffRole[];
+}[] = [
     {
         icon: Users,
         label: 'Players',
         path: path.players,
         color: 'bg-success/10 text-success',
+        roles: ['VENUE_ADMIN', 'VENUE_MANAGER'],
     },
     {
         icon: Plus,
@@ -31,19 +40,28 @@ const menuItems = [
         label: 'Analytics',
         path: path.analytics,
         color: 'bg-destructive/10 text-destructive',
+        roles: ['VENUE_ADMIN', 'VENUE_MANAGER'],
     },
     {
         icon: Settings,
         label: 'Settings',
         path: path.settings,
         color: 'bg-muted text-muted-foreground',
+        roles: ['VENUE_ADMIN', 'VENUE_MANAGER'],
     },
     {
         icon: Wallet,
         label: 'Wallets',
         path: path.wallet,
         color: 'bg-success/10 text-success',
-        roles: ['venue_admin'],
+        roles: ['VENUE_ADMIN'],
+    },
+    {
+        icon: UserCog,
+        label: 'Staff',
+        path: path.staff,
+        color: 'bg-primary/10 text-primary',
+        roles: ['VENUE_ADMIN'],
     },
 ];
 
@@ -65,6 +83,10 @@ const statusLabel: Record<BookingStatus, string> = {
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const role = useVenueRole();
+    const menuItems = ALL_MENU_ITEMS.filter(
+        (item) => !item.roles || item.roles.includes(role),
+    );
     const [bookings, setBookings] = useState<BookingModel[]>([]);
     const [total, setTotal] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);

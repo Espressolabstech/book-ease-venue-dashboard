@@ -5,7 +5,7 @@ export const managerLogin = async (data: ManagerLogin) => {
     return apiClient({ url: endpoints.login, method: 'POST', data });
 };
 
-export const verifyOtp = async (data: VerifyOtp): Promise<AuthResponse> => {
+export const verifyOtp = async (data: VerifyOtp): Promise<VerifyOtpResponse> => {
     return apiClient({ url: endpoints.verifyOtp, method: 'POST', data });
 };
 

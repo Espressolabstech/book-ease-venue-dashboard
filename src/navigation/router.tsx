@@ -3,6 +3,8 @@ import {
     AuthWrapper,
     DashboardWrapper,
     ProtectedComponentWrapper,
+    VenueAdminOnlyWrapper,
+    VenueAdminOrManagerWrapper,
 } from '../utils/wrapper';
 import Login from '../screens/Login';
 import { path } from './commanPaths';
@@ -15,6 +17,7 @@ import ListBookings from '../screens/Bookings/ListBookings';
 import Players from '../screens/Players';
 import Analytics from '../screens/Analytics';
 import Wallets from '../screens/Wallets';
+import Staff from '../screens/Staff';
 
 export const router = createBrowserRouter([
     {
@@ -35,7 +38,9 @@ export const router = createBrowserRouter([
     },
     {
         path: path.settings,
-        element: <ProtectedComponentWrapper children={<Settings />} />,
+        element: (
+            <VenueAdminOrManagerWrapper children={<Settings />} />
+        ),
     },
     {
         path: path.bookings,
@@ -47,14 +52,22 @@ export const router = createBrowserRouter([
     },
     {
         path: path.players,
-        element: <ProtectedComponentWrapper children={<Players />} />,
+        element: (
+            <VenueAdminOrManagerWrapper children={<Players />} />
+        ),
     },
     {
         path: path.analytics,
-        element: <ProtectedComponentWrapper children={<Analytics />} />,
+        element: (
+            <VenueAdminOrManagerWrapper children={<Analytics />} />
+        ),
     },
     {
         path: path.wallet,
-        element: <ProtectedComponentWrapper children={<Wallets />} />,
+        element: <VenueAdminOnlyWrapper children={<Wallets />} />,
+    },
+    {
+        path: path.staff,
+        element: <VenueAdminOnlyWrapper children={<Staff />} />,
     },
 ]);

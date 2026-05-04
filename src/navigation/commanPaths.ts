@@ -9,4 +9,5 @@ export const path = {
     players: '/manager/players',
     analytics: '/manager/analytics',
     wallet: '/manager/wallets',
+    staff: '/manager/staff',
 };

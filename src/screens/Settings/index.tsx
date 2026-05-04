@@ -1,6 +1,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { canEdit, useVenueRole } from '../../hooks/useVenueRole';
 import { toast } from 'sonner';
 import HubView from '../../components/settings/hubView';
 import HoursSection from '../../components/settings/hoursSection';
@@ -105,6 +106,8 @@ const defaultHours: OperatingHours[] = DAY_NAMES.map((day) => ({
 
 const Settings = () => {
     const navigate = useNavigate();
+    const role = useVenueRole();
+    const readOnly = !canEdit(role);
     const [section, setSection] = useState<Section>('hub');
     const [activeSport, setActiveSport] = useState('Padel');
 
@@ -847,6 +850,7 @@ const Settings = () => {
                         updatePrice={updateSportPrice}
                         onSave={savePeakHours}
                         saving={savingPeak}
+                        readOnly={readOnly}
                     />
                 )}
                 {section === 'courts' && (
@@ -910,6 +914,7 @@ const Settings = () => {
                         onToggleAmenity={toggleAmenity}
                         onSave={saveFacility}
                         saving={savingFacility}
+                        readOnly={readOnly}
                     />
                 )}
                 {section === 'policy' && (
