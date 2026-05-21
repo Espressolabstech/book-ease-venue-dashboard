@@ -10,4 +10,5 @@ export const path = {
     analytics: '/manager/analytics',
     wallet: '/manager/wallets',
     staff: '/manager/staff',
+    clubMembers: '/manager/club-members',
 };

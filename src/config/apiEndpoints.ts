@@ -101,4 +101,12 @@ export const endpoints = {
     addStaff: '/venue/staff/add',
     updateStaffRole: (id: string) => `/venue/staff/${id}/role`,
     removeStaff: (id: string) => `/venue/staff/${id}`,
+
+    // Private club endpoints
+    privateClubConfig: '/private-club/config',
+    privateClubMembers: '/private-club/members',
+    privateClubMember: (memberId: string) => `/private-club/members/${memberId}`,
+    privateClubMemberWallet: (memberId: string) => `/private-club/members/${memberId}/wallet`,
+    privateClubAdjustPoints: '/private-club/points/adjust',
+    privateClubAllocatePoints: '/private-club/points/allocate',
 };

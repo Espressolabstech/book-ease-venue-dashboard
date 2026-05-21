@@ -7,6 +7,7 @@ import {
     UserCog,
     Users,
     Wallet,
+    Shield,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
@@ -62,6 +63,13 @@ const ALL_MENU_ITEMS: {
         path: path.staff,
         color: 'bg-primary/10 text-primary',
         roles: ['VENUE_ADMIN'],
+    },
+    {
+        icon: Shield,
+        label: 'Club Members',
+        path: path.clubMembers,
+        color: 'bg-violet-100 text-violet-700',
+        roles: ['VENUE_ADMIN', 'VENUE_MANAGER'],
     },
 ];
 

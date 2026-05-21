@@ -18,6 +18,7 @@ import Players from '../screens/Players';
 import Analytics from '../screens/Analytics';
 import Wallets from '../screens/Wallets';
 import Staff from '../screens/Staff';
+import ClubMembers from '../screens/ClubMembers';
 
 export const router = createBrowserRouter([
     {
@@ -69,5 +70,9 @@ export const router = createBrowserRouter([
     {
         path: path.staff,
         element: <VenueAdminOnlyWrapper children={<Staff />} />,
+    },
+    {
+        path: path.clubMembers,
+        element: <VenueAdminOrManagerWrapper children={<ClubMembers />} />,
     },
 ]);
