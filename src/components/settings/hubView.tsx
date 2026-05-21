@@ -4,6 +4,7 @@ import {
     ChevronRight,
     Clock,
     LayoutGrid,
+    Plus,
     ShieldCheck,
     Zap,
 } from 'lucide-react';
@@ -22,8 +23,13 @@ const HubView = ({
     facility: FacilityInfo;
     onNavigate: (section: Section, sport?: string) => void;
 }) => {
-    const padelCount = courts.filter((c) => c.sport === 'Padel').length;
-    const pickleCount = courts.filter((c) => c.sport === 'Pickleball').length;
+    // Group courts by sport
+    const sportGroups: Record<string, number> = {};
+    for (const c of courts) {
+        sportGroups[c.sport] = (sportGroups[c.sport] ?? 0) + 1;
+    }
+    const sportList = Object.entries(sportGroups);
+
     const upcomingDowntimes = downtimes.filter(
         (d) => new Date(d.startDate) >= new Date(),
     );
@@ -45,12 +51,16 @@ const HubView = ({
                     <HubCard
                         icon={<Zap className="h-5 w-5 text-primary" />}
                         title="Peak Hours & Pricing"
-                        subtitle={peakConfigs
-                            .map(
-                                (c) =>
-                                    `${c.sport}: ₹${c.offPeakPrice}–₹${c.peakPrice}/slot`,
-                            )
-                            .join(' · ')}
+                        subtitle={
+                            peakConfigs.length > 0
+                                ? peakConfigs
+                                      .map(
+                                          (c) =>
+                                              `${c.sport}: ₹${c.offPeakPrice}–₹${c.peakPrice}/slot`,
+                                      )
+                                      .join(' · ')
+                                : 'No sports configured yet'
+                        }
                         onClick={() => onNavigate('peak')}
                     />
                     <HubCard
@@ -66,23 +76,27 @@ const HubView = ({
                 </div>
             </div>
 
-            {/* ── Sports ── */}
+            {/* ── Courts / Sports ── */}
             <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
                     Courts
                 </p>
                 <div className="space-y-2">
+                    {sportList.map(([sport, count]) => (
+                        <HubCard
+                            key={sport}
+                            icon={<LayoutGrid className="h-5 w-5 text-primary" />}
+                            title={`${sport} Courts`}
+                            subtitle={`${count} court${count !== 1 ? 's' : ''}`}
+                            onClick={() => onNavigate('courts', sport)}
+                        />
+                    ))}
+                    {/* Add Sport / Court card — always visible */}
                     <HubCard
-                        icon={<LayoutGrid className="h-5 w-5 text-primary" />}
-                        title="Padel Courts"
-                        subtitle={`${padelCount} court${padelCount !== 1 ? 's' : ''}`}
-                        onClick={() => onNavigate('courts', 'Padel')}
-                    />
-                    <HubCard
-                        icon={<LayoutGrid className="h-5 w-5 text-primary" />}
-                        title="Pickleball Courts"
-                        subtitle={`${pickleCount} court${pickleCount !== 1 ? 's' : ''}`}
-                        onClick={() => onNavigate('courts', 'Pickleball')}
+                        icon={<Plus className="h-5 w-5 text-primary" />}
+                        title="Add Sport / Court"
+                        subtitle="Set up courts for a new sport"
+                        onClick={() => onNavigate('courts', '__new__')}
                     />
                 </div>
             </div>

@@ -8,7 +8,28 @@ declare global {
         | 'facility'
         | 'policy';
 
-    type SportType = 'PICKELBALL' | 'PADEL';
+    type SportType =
+        | 'PICKELBALL'
+        | 'PADEL'
+        | 'TENNIS'
+        | 'BADMINTON'
+        | 'TABLE_TENNIS'
+        | 'SQUASH'
+        | 'FOOTBALL'
+        | 'CRICKET'
+        | 'BOX_CRICKET'
+        | 'BASKETBALL'
+        | 'VOLLEYBALL'
+        | 'SWIMMING'
+        | 'HOCKEY'
+        | 'GOLF'
+        | 'CYCLING'
+        | 'YOGA'
+        | 'GYM'
+        | 'RIFLE_SHOOTING'
+        | 'ARCHERY'
+        | 'BOXING'
+        | 'SNOOKER';
     type CourtEnvironment = 'INDOOR' | 'OUTDOOR';
     type CourtSurface =
         | 'ARTIFICIAL_GRASS'

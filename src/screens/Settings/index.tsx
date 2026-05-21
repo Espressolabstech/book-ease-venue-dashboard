@@ -53,6 +53,7 @@ import {
     getBookingPolicy,
     updateBookingPolicy,
 } from '../../api/adapters/bookingPolicy';
+import { SPORT_DISPLAY, SPORT_API } from '../../utils/settings';
 
 // ── Day index helpers ─────────────────────────────────────────────────────────
 const DAY_NAMES = [
@@ -87,7 +88,7 @@ function courtModelToCourtData(c: CourtModel): CourtData {
     return {
         id: c.id,
         name: c.name,
-        sport: c.sport === 'PADEL' ? 'Padel' : 'Pickleball',
+        sport: SPORT_DISPLAY[c.sport] ?? c.sport,
         surfaceMaterial: c.surface,
         lighting:
             c.environment === 'INDOOR' ? 'Indoor Lighting' : 'LED Floodlights',
@@ -195,16 +196,11 @@ const Settings = () => {
         if (!courtsRaw.length) return;
         setLoadingSection('peak');
         try {
-            const sportMap: Record<string, string> = {
-                PADEL: 'Padel',
-                PICKELBALL: 'Pickleball',
-            };
-
             // Fetch peak pricings for every court, then group by sport
             const allPeaks = await Promise.all(
                 courtsRaw.map((c) =>
                     listPeakHourPricings({ courtId: c.id }).then((r) => ({
-                        sport: sportMap[c.sport] ?? c.sport,
+                        sport: SPORT_DISPLAY[c.sport] ?? c.sport,
                         offPeakPrice: c.courtPricings[0]?.pricePerSlot ?? 0,
                         peaks: r.data.peakHourPricings,
                     })),
@@ -266,16 +262,8 @@ const Settings = () => {
                 }
             }
 
-            // Ensure both sports always appear (even if no courts exist yet)
-            const configs: SportPeakConfig[] = ['Padel', 'Pickleball'].map(
-                (sport) =>
-                    bySport[sport] ?? {
-                        sport,
-                        offPeakPrice: 0,
-                        peakPrice: 0,
-                        slots: [],
-                    },
-            );
+            // Use only sports that actually have courts
+            const configs: SportPeakConfig[] = Object.values(bySport);
 
             setPeakConfigs(configs);
         } catch {
@@ -369,7 +357,7 @@ const Settings = () => {
         hub: 'Settings',
         hours: 'Operating Hours',
         peak: 'Peak Hours & Pricing',
-        courts: `${activeSport} Courts`,
+        courts: activeSport ? `${activeSport} Courts` : 'Add Court',
         downtime: 'Scheduled Downtime',
         facility: 'Facility Info',
         policy: 'Booking Rules',
@@ -505,15 +493,10 @@ const Settings = () => {
     const savePeakHours = async () => {
         setSavingPeak(true);
         try {
-            const apiSportMap: Record<string, string> = {
-                Padel: 'PADEL',
-                Pickleball: 'PICKELBALL',
-            };
             // All courts grouped by display-sport
             const courtsBySportDisplay: Record<string, string[]> = {};
             for (const c of courtsRaw) {
-                const displaySport =
-                    c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
+                const displaySport = SPORT_DISPLAY[c.sport] ?? c.sport;
                 if (!courtsBySportDisplay[displaySport])
                     courtsBySportDisplay[displaySport] = [];
                 courtsBySportDisplay[displaySport].push(c.id);
@@ -562,7 +545,7 @@ const Settings = () => {
             // Also update offPeakPrice (base court pricing) for each sport
             await Promise.all(
                 peakConfigs.map((c) => {
-                    const apiSport = apiSportMap[c.sport];
+                    const apiSport = SPORT_API[c.sport];
                     const sportCourts = courtsRaw.filter(
                         (r) => r.sport === apiSport,
                     );
@@ -631,8 +614,7 @@ const Settings = () => {
             return;
         }
         try {
-            const sport: SportType =
-                newCourt.sport === 'Padel' ? 'PADEL' : 'PICKELBALL';
+            const sport: SportType = (SPORT_API[newCourt.sport] ?? 'PADEL') as SportType;
             const environment: CourtEnvironment = newCourt.roofed
                 ? 'INDOOR'
                 : 'OUTDOOR';
@@ -669,10 +651,12 @@ const Settings = () => {
                 timeSlots,
                 pricing: { pricePerSlot: newCourt.pricePerSlot },
             });
+            const addedSport = newCourt.sport;
             setShowAddForm(false);
+            setActiveSport(addedSport);
             setNewCourt({
                 name: '',
-                sport: activeSport,
+                sport: addedSport,
                 surfaceMaterial: '',
                 lighting: 'LED Floodlights',
                 roofed: false,
@@ -824,7 +808,11 @@ const Settings = () => {
                         onNavigate={(s, sport) => {
                             setSection(s);
 
-                            if (sport) {
+                            if (sport === '__new__') {
+                                setActiveSport('');
+                                setShowAddForm(true);
+                                setNewCourt({ name: '', sport: 'Padel', surfaceMaterial: '', lighting: 'LED Floodlights', roofed: false, isActive: true, pricePerSlot: 0 });
+                            } else if (sport) {
                                 setActiveSport(sport);
                                 setNewCourt((p) => ({ ...p, sport }));
                             }
@@ -856,7 +844,7 @@ const Settings = () => {
                 {section === 'courts' && (
                     <CourtsSection
                         sport={activeSport}
-                        courts={courts.filter((c) => c.sport === activeSport)}
+                        courts={activeSport ? courts.filter((c) => c.sport === activeSport) : []}
                         peakConfig={getSportPeak(activeSport)}
                         downtimes={downtimes}
                         editingCourtId={editingCourtId}

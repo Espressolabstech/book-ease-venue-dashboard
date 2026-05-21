@@ -74,7 +74,7 @@ const CourtsSection = ({
                     <CardContent className="p-4 space-y-3">
                         <div className="flex items-center justify-between">
                             <h4 className="font-medium text-foreground">
-                                New {sport} Court
+                                New {newCourt.sport || sport} Court
                             </h4>
                             <button onClick={() => onSetShowAdd(false)}>
                                 <X className="h-4 w-4 text-muted-foreground" />
@@ -83,6 +83,7 @@ const CourtsSection = ({
                         <CourtForm
                             data={newCourt}
                             onChange={onNewCourtChange}
+                            allowSportChange
                         />
                         <Button className="w-full" onClick={onAddCourt}>
                             <Plus className="mr-1.5 h-4 w-4" /> Add Court

@@ -1,4 +1,4 @@
-import { lightingOptions, surfaceOptions } from '../../utils/settings';
+import { ALL_SPORTS, lightingOptions, surfaceOptions } from '../../utils/settings';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import {
@@ -13,13 +13,37 @@ import { Switch } from '../ui/switch';
 const CourtForm = ({
     data,
     onChange,
+    allowSportChange = false,
 }: {
     data: Omit<CourtData, 'id'> | CourtData;
     onChange: (u: Partial<CourtData>) => void;
+    allowSportChange?: boolean;
 }) => {
-    const surfaces = surfaceOptions[data.sport] || surfaceOptions.Padel;
+    const surfaces = surfaceOptions[data.sport] ?? surfaceOptions.default;
     return (
         <div className="space-y-3">
+            {allowSportChange && (
+                <div>
+                    <Label className="text-xs">Sport</Label>
+                    <Select
+                        value={data.sport}
+                        onValueChange={(v) =>
+                            onChange({ sport: v, surfaceMaterial: '' })
+                        }
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select sport" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {ALL_SPORTS.map((s) => (
+                                <SelectItem key={s.value} value={s.label}>
+                                    {s.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
             <div>
                 <Label className="text-xs">Court Name</Label>
                 <Input

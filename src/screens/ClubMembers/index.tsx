@@ -12,6 +12,7 @@ import {
     ArrowDownCircle,
     RefreshCw,
     X,
+    Dumbbell,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
@@ -722,6 +723,7 @@ function ToggleAccess({
 // ── Config Tab ────────────────────────────────────────────────────────────────
 
 function ConfigTab() {
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { data, isLoading } = useQuery({
         queryKey: ['privateClubConfig'],
@@ -924,6 +926,32 @@ function ConfigTab() {
                         <p className="text-xs text-muted-foreground mt-1">
                             Used for header, buttons, and date highlights in the player view
                         </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Sports & Courts */}
+            <Card>
+                <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                            <Dumbbell className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-medium">Sports & Courts</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Add courts for new sports (Tennis, Football, Badminton…) from Settings
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(path.settings)}
+                            className="shrink-0"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                            Manage
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
