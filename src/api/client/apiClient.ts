@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import config from '../../config/config';
-import { getToken, removeToken } from '../../utils/cookies.helpers';
+import { getToken } from '../../utils/cookies.helpers';
 
 const apiClient = async <T = unknown>(
     options: AxiosRequestConfig,

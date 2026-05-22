@@ -2,7 +2,7 @@ import { endpoints } from '../../config/apiEndpoints';
 import apiClient from '../client/apiClient';
 
 export const listStaff = () =>
-    apiClient({ url: endpoints.listStaff, method: 'GET' });
+    apiClient<{ data: { staff: StaffMember[] } }>({ url: endpoints.listStaff, method: 'GET' });
 
 export const addStaff = (data: {
     phone: string;
