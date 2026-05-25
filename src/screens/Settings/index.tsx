@@ -592,7 +592,7 @@ const Settings = () => {
             );
 
             toast.success('Peak hours & pricing saved');
-            fetchPeakHours();
+            fetchCourts(); // refreshes courtsRaw → triggers useEffect → fetchPeakHours with fresh offPeakPrice
         } catch {
             toast.error('Failed to save peak hours');
         } finally {
