@@ -8,6 +8,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import { venueOnboard } from '../../api/adapters/onBoard';
+import { getPrivateClubConfig } from '../../api/adapters/privateClub';
+import { useQuery } from '@tanstack/react-query';
 import { path } from '../../navigation/commanPaths';
 
 const StepReview = ({
@@ -24,6 +26,14 @@ const StepReview = ({
     const [agreed, setAgreed] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [termsOpen, setTermsOpen] = useState(false);
+
+    const { data: clubConfigData } = useQuery({
+        queryKey: ['private-club-config'],
+        queryFn: getPrivateClubConfig,
+    });
+    const isClubWithPoints =
+        (clubConfigData?.data?.config?.isPrivateClub ?? false) &&
+        (clubConfigData?.data?.config?.pointsEnabled ?? false);
 
     const [step1, setStep1] = useState<any>(null);
     const [step2, setStep2] = useState<any[]>([]);
@@ -155,14 +165,16 @@ const StepReview = ({
                                 dayOfWeek: dow,
                                 startTime: slot.start,
                                 endTime: slot.end,
-                                pricePerSlot: parseFloat(slot.rate) || 0,
+                                pricePerSlot: isClubWithPoints ? 0 : (parseFloat(slot.rate) || 0),
+                                ...(isClubWithPoints && { pointsPerSlot: parseFloat(slot.rate) || 0 }),
                             });
                         }
                     } else {
                         peakHourPricings.push({
                             startTime: slot.start,
                             endTime: slot.end,
-                            pricePerSlot: parseFloat(slot.rate) || 0,
+                            pricePerSlot: isClubWithPoints ? 0 : (parseFloat(slot.rate) || 0),
+                            ...(isClubWithPoints && { pointsPerSlot: parseFloat(slot.rate) || 0 }),
                         });
                     }
                 }
@@ -183,7 +195,8 @@ const StepReview = ({
                                 dayOfWeek: dow,
                                 startTime: slot.start,
                                 endTime: slot.end,
-                                pricePerSlot: parseFloat(slot.rate) || 0,
+                                pricePerSlot: isClubWithPoints ? 0 : (parseFloat(slot.rate) || 0),
+                                ...(isClubWithPoints && { pointsPerSlot: parseFloat(slot.rate) || 0 }),
                                 label: 'weekend_peak',
                             });
                         }
@@ -191,7 +204,8 @@ const StepReview = ({
                         peakHourPricings.push({
                             startTime: slot.start,
                             endTime: slot.end,
-                            pricePerSlot: parseFloat(slot.rate) || 0,
+                            pricePerSlot: isClubWithPoints ? 0 : (parseFloat(slot.rate) || 0),
+                            ...(isClubWithPoints && { pointsPerSlot: parseFloat(slot.rate) || 0 }),
                             label: 'weekend_peak',
                         });
                     }
@@ -208,12 +222,12 @@ const StepReview = ({
                 timeSlots,
                 pricing: sportPricing
                     ? {
-                          pricePerSlot: parseFloat(sportPricing.base_rate) || 0,
+                          pricePerSlot: isClubWithPoints ? 0 : (parseFloat(sportPricing.base_rate) || 0),
+                          ...(isClubWithPoints && { pointsPerSlot: parseFloat(sportPricing.base_rate) || 0 }),
                           ...(sportPricing.weekend_rate_enabled && {
-                              weekendPricePerSlot: parseFloat(
-                                  sportPricing.weekend_rate,
-                              ),
+                              weekendPricePerSlot: isClubWithPoints ? 0 : parseFloat(sportPricing.weekend_rate),
                               weekendDays: weekendDaysInt,
+                              ...(isClubWithPoints && { weekendPointsPerSlot: parseFloat(sportPricing.weekend_rate) || 0 }),
                           }),
                       }
                     : undefined,
