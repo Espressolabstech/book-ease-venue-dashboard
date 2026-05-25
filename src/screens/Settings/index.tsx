@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { canEdit, useVenueRole } from '../../hooks/useVenueRole';
 import { toast } from 'sonner';
@@ -44,6 +44,7 @@ import {
     updateVenueDescription,
     updateVenueInfo,
 } from '../../api/adapters/onBoard';
+import { getPrivateClubConfig } from '../../api/adapters/privateClub';
 import {
     listDowntimes,
     createDowntime as createDowntimeApi,
@@ -84,7 +85,7 @@ function venueHoursToOperatingHours(
 
 // ── Day index helpers (continued) ─────────────────────────────────────────────
 
-function courtModelToCourtData(c: CourtModel): CourtData {
+function courtModelToCourtData(c: CourtModel, isClub = false): CourtData {
     return {
         id: c.id,
         name: c.name,
@@ -94,7 +95,9 @@ function courtModelToCourtData(c: CourtModel): CourtData {
             c.environment === 'INDOOR' ? 'Indoor Lighting' : 'LED Floodlights',
         roofed: c.environment === 'INDOOR',
         isActive: c.status === 'ACTIVE',
-        pricePerSlot: c.courtPricings[0]?.pricePerSlot ?? 0,
+        pricePerSlot: isClub
+            ? (c.courtPricings[0]?.pointsPerSlot ?? 0)
+            : (c.courtPricings[0]?.pricePerSlot ?? 0),
     };
 }
 
@@ -113,6 +116,8 @@ const Settings = () => {
     const [activeSport, setActiveSport] = useState('Padel');
 
     // ── API-backed state ──
+    const [isClub, setIsClub] = useState(false);
+    const isClubRef = useRef(false);
     const [courts, setCourts] = useState<CourtData[]>([]);
     const [courtsRaw, setCourtsRaw] = useState<CourtModel[]>([]);
     const [hours, setHours] = useState<OperatingHours[]>(defaultHours);
@@ -172,7 +177,7 @@ const Settings = () => {
         try {
             const res = await getCourts();
             setCourtsRaw(res.data.courts);
-            setCourts(res.data.courts.map(courtModelToCourtData));
+            setCourts(res.data.courts.map((c) => courtModelToCourtData(c, isClubRef.current)));
         } catch {
             toast.error('Failed to load courts');
         } finally {
@@ -201,7 +206,9 @@ const Settings = () => {
                 courtsRaw.map((c) =>
                     listPeakHourPricings({ courtId: c.id }).then((r) => ({
                         sport: SPORT_DISPLAY[c.sport] ?? c.sport,
-                        offPeakPrice: c.courtPricings[0]?.pricePerSlot ?? 0,
+                        offPeakPrice: isClubRef.current
+                            ? (c.courtPricings[0]?.pointsPerSlot ?? 0)
+                            : (c.courtPricings[0]?.pricePerSlot ?? 0),
                         peaks: r.data.peakHourPricings,
                     })),
                 ),
@@ -224,7 +231,9 @@ const Settings = () => {
                 const config = bySport[sport];
                 // Use the first non-empty court's prices as representative
                 if (peaks.length > 0 && config.peakPrice === 0) {
-                    config.peakPrice = peaks[0].pricePerSlot;
+                    config.peakPrice = isClubRef.current
+                        ? (peaks[0].pointsPerSlot ?? 0)
+                        : peaks[0].pricePerSlot;
                     config.offPeakPrice = offPeakPrice;
                 }
                 // Build a dedup key per unique {startTime, endTime, dayOfWeek}
@@ -312,6 +321,17 @@ const Settings = () => {
         }
     }, []);
 
+    const fetchClubConfig = useCallback(async () => {
+        try {
+            const res = await getPrivateClubConfig();
+            const club = res.data.config.isPrivateClub && res.data.config.pointsEnabled;
+            isClubRef.current = club;
+            setIsClub(club);
+        } catch {
+            // Not a club venue — leave isClub as false
+        }
+    }, []);
+
     const fetchPolicy = useCallback(async () => {
         setLoadingPolicy(true);
         try {
@@ -341,13 +361,21 @@ const Settings = () => {
 
     // ── Initial load ─────────────────────────────────────────────────────────────
 
+    // Re-derive court display data when isClub resolves (avoids double API call)
     useEffect(() => {
+        if (courtsRaw.length) {
+            setCourts(courtsRaw.map((c) => courtModelToCourtData(c, isClub)));
+        }
+    }, [isClub]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        fetchClubConfig();
         fetchCourts();
         fetchHours();
         fetchAmenities();
         fetchPolicy();
         fetchDowntimes();
-    }, [fetchCourts, fetchHours, fetchAmenities, fetchPolicy, fetchDowntimes]);
+    }, [fetchClubConfig, fetchCourts, fetchHours, fetchAmenities, fetchPolicy, fetchDowntimes]);
 
     useEffect(() => {
         if (courtsRaw.length) fetchPeakHours();
@@ -533,7 +561,8 @@ const Settings = () => {
                                     courtId,
                                     startTime: s.startTime,
                                     endTime: s.endTime,
-                                    pricePerSlot: config.peakPrice,
+                                    pricePerSlot: isClub ? 0 : config.peakPrice,
+                                    ...(isClub ? { pointsPerSlot: config.peakPrice } : {}),
                                     ...(dayOfWeek >= 0 ? { dayOfWeek } : {}),
                                 });
                             }),
@@ -553,9 +582,10 @@ const Settings = () => {
                         sportCourts
                             .filter((r) => r.courtPricings[0])
                             .map((r) =>
-                                updateCourtPricing(r.courtPricings[0].id, {
-                                    pricePerSlot: c.offPeakPrice,
-                                }),
+                                updateCourtPricing(r.courtPricings[0].id, isClub
+                                    ? { pricePerSlot: 0, pointsPerSlot: c.offPeakPrice }
+                                    : { pricePerSlot: c.offPeakPrice },
+                                ),
                             ),
                     );
                 }),
@@ -610,7 +640,7 @@ const Settings = () => {
             return;
         }
         if (!newCourt.pricePerSlot || newCourt.pricePerSlot <= 0) {
-            toast.error('Price per slot is required');
+            toast.error(isClub ? 'Points per slot is required' : 'Price per slot is required');
             return;
         }
         try {
@@ -649,7 +679,9 @@ const Settings = () => {
                 surface:
                     surfaceMap[newCourt.surfaceMaterial] ?? 'ARTIFICIAL_GRASS',
                 timeSlots,
-                pricing: { pricePerSlot: newCourt.pricePerSlot },
+                pricing: isClub
+                    ? { pricePerSlot: 0, pointsPerSlot: newCourt.pricePerSlot }
+                    : { pricePerSlot: newCourt.pricePerSlot },
             });
             const addedSport = newCourt.sport;
             setShowAddForm(false);
@@ -839,6 +871,7 @@ const Settings = () => {
                         onSave={savePeakHours}
                         saving={savingPeak}
                         readOnly={readOnly}
+                        isClub={isClub}
                     />
                 )}
                 {section === 'courts' && (
@@ -846,6 +879,7 @@ const Settings = () => {
                         sport={activeSport}
                         courts={activeSport ? courts.filter((c) => c.sport === activeSport) : []}
                         peakConfig={getSportPeak(activeSport)}
+                        isClub={isClub}
                         downtimes={downtimes}
                         editingCourtId={editingCourtId}
                         editForm={editForm}

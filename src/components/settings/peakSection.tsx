@@ -79,6 +79,7 @@ const PeakSection = ({
     onSave,
     saving,
     readOnly = false,
+    isClub = false,
 }: {
     peakConfigs: SportPeakConfig[];
     addSlot: (sport: string) => void;
@@ -89,6 +90,7 @@ const PeakSection = ({
     onSave: () => void;
     saving?: boolean;
     readOnly?: boolean;
+    isClub?: boolean;
 }) => {
     // Compute all conflicts across all sport configs
     const allConflictKeys = new Set<string>();
@@ -164,7 +166,9 @@ const PeakSection = ({
                             {/* Pricing */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <Label className="text-xs">Off-Peak (₹/slot)</Label>
+                                    <Label className="text-xs">
+                                        {isClub ? 'Off-Peak (pts/slot)' : 'Off-Peak (₹/slot)'}
+                                    </Label>
                                     <Input
                                         type="number"
                                         value={config.offPeakPrice}
@@ -174,7 +178,9 @@ const PeakSection = ({
                                     />
                                 </div>
                                 <div>
-                                    <Label className="text-xs">Peak (₹/slot)</Label>
+                                    <Label className="text-xs">
+                                        {isClub ? 'Peak (pts/slot)' : 'Peak (₹/slot)'}
+                                    </Label>
                                     <Input
                                         type="number"
                                         value={config.peakPrice}

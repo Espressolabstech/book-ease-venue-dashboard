@@ -14,10 +14,12 @@ const CourtForm = ({
     data,
     onChange,
     allowSportChange = false,
+    isClub = false,
 }: {
     data: Omit<CourtData, 'id'> | CourtData;
     onChange: (u: Partial<CourtData>) => void;
     allowSportChange?: boolean;
+    isClub?: boolean;
 }) => {
     const surfaces = surfaceOptions[data.sport] ?? surfaceOptions.default;
     return (
@@ -71,7 +73,9 @@ const CourtForm = ({
                 </Select>
             </div>
             <div>
-                <Label className="text-xs">Price per Slot (₹)</Label>
+                <Label className="text-xs">
+                    {isClub ? 'Points per Slot (pts)' : 'Price per Slot (₹)'}
+                </Label>
                 <Input
                     type="number"
                     min={0}
@@ -81,7 +85,7 @@ const CourtForm = ({
                             pricePerSlot: parseFloat(e.target.value) || 0,
                         })
                     }
-                    placeholder="e.g. 500"
+                    placeholder={isClub ? 'e.g. 100' : 'e.g. 500'}
                 />
             </div>
             <div className="grid grid-cols-2 gap-3">
