@@ -96,7 +96,7 @@ function courtModelToCourtData(c: CourtModel, isClub = false): CourtData {
         roofed: c.environment === 'INDOOR',
         isActive: c.status === 'ACTIVE',
         pricePerSlot: isClub
-            ? (c.courtPricings[0]?.pointsPerSlot ?? 0)
+            ? (c.courtPricings[0]?.pointsPerSlot ?? c.courtPricings[0]?.pricePerSlot ?? 0)
             : (c.courtPricings[0]?.pricePerSlot ?? 0),
     };
 }
@@ -207,7 +207,7 @@ const Settings = () => {
                     listPeakHourPricings({ courtId: c.id }).then((r) => ({
                         sport: SPORT_DISPLAY[c.sport] ?? c.sport,
                         offPeakPrice: isClubRef.current
-                            ? (c.courtPricings[0]?.pointsPerSlot ?? 0)
+                            ? (c.courtPricings[0]?.pointsPerSlot ?? c.courtPricings[0]?.pricePerSlot ?? 0)
                             : (c.courtPricings[0]?.pricePerSlot ?? 0),
                         peaks: r.data.peakHourPricings,
                     })),
@@ -232,7 +232,7 @@ const Settings = () => {
                 // Use the first non-empty court's prices as representative
                 if (peaks.length > 0 && config.peakPrice === 0) {
                     config.peakPrice = isClubRef.current
-                        ? (peaks[0].pointsPerSlot ?? 0)
+                        ? (peaks[0].pointsPerSlot ?? peaks[0].pricePerSlot)
                         : peaks[0].pricePerSlot;
                     config.offPeakPrice = offPeakPrice;
                 }
