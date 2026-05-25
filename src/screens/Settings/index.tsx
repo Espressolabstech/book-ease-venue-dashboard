@@ -618,11 +618,21 @@ const Settings = () => {
             const status: CourtStatus = editForm.isActive
                 ? 'ACTIVE'
                 : 'INACTIVE';
+            const rawCourt = courtsRaw.find((c) => c.id === editForm.id);
+            const pricingId = rawCourt?.courtPricings[0]?.id;
             await updateCourt(editForm.id, {
                 name: editForm.name,
                 environment,
                 status,
             });
+            if (pricingId) {
+                await updateCourtPricing(
+                    pricingId,
+                    isClub
+                        ? { pricePerSlot: 0, pointsPerSlot: editForm.pricePerSlot }
+                        : { pricePerSlot: editForm.pricePerSlot },
+                );
+            }
             cancelEdit();
             toast.success('Court updated');
             fetchCourts();

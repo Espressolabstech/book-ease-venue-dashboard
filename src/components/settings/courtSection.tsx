@@ -120,6 +120,7 @@ const CourtsSection = ({
                                     <CourtForm
                                         data={editForm}
                                         onChange={onEditFormChange}
+                                        isClub={isClub}
                                     />
                                     <div className="flex gap-2">
                                         <Button
