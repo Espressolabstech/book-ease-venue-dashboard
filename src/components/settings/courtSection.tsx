@@ -21,6 +21,7 @@ const CourtsSection = ({
     onSetDeleteId,
     onNewCourtChange,
     onEditFormChange,
+    isClub = false,
 }: {
     sport: string;
     courts: CourtData[];
@@ -38,6 +39,7 @@ const CourtsSection = ({
     onSetDeleteId: (id: string) => void;
     onNewCourtChange: (u: Partial<CourtData>) => void;
     onEditFormChange: (u: Partial<CourtData>) => void;
+    isClub?: boolean;
 }) => {
     return (
         <div className="space-y-4">
@@ -46,11 +48,11 @@ const CourtsSection = ({
                 <Zap className="h-4 w-4 text-primary shrink-0" />
                 <p className="text-sm text-foreground">
                     <span className="font-medium">
-                        ₹{peakConfig.offPeakPrice}
+                        {isClub ? `${peakConfig.offPeakPrice} pts` : `₹${peakConfig.offPeakPrice}`}
                     </span>
                     <span className="text-muted-foreground"> off-peak · </span>
                     <span className="font-medium">
-                        ₹{peakConfig.peakPrice}
+                        {isClub ? `${peakConfig.peakPrice} pts` : `₹${peakConfig.peakPrice}`}
                     </span>
                     <span className="text-muted-foreground"> peak</span>
                 </p>
@@ -84,6 +86,7 @@ const CourtsSection = ({
                             data={newCourt}
                             onChange={onNewCourtChange}
                             allowSportChange
+                            isClub={isClub}
                         />
                         <Button className="w-full" onClick={onAddCourt}>
                             <Plus className="mr-1.5 h-4 w-4" /> Add Court

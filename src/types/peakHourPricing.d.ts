@@ -6,6 +6,7 @@ declare global {
         startTime: string;
         endTime: string;
         pricePerSlot: number;
+        pointsPerSlot?: number | null;
         label: string | null;
         isActive: boolean;
         createdAt: string;
@@ -26,6 +27,7 @@ declare global {
         startTime: string;
         endTime: string;
         pricePerSlot: number;
+        pointsPerSlot?: number;
         label?: string | null;
     }
 

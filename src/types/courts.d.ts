@@ -119,6 +119,7 @@ declare global {
         id: string;
         courtId: string;
         pricePerSlot: number;
+        pointsPerSlot?: number | null;
         weekendPricePerSlot: number | null;
         weekendDays: number[];
         createdAt: string;
@@ -132,6 +133,7 @@ declare global {
         startTime: string;
         endTime: string;
         pricePerSlot: number;
+        pointsPerSlot?: number | null;
         label: string | null;
         isActive: boolean;
         createdAt: string;
@@ -180,6 +182,7 @@ declare global {
 
     interface CreateCourtPricingPayload {
         pricePerSlot: number;
+        pointsPerSlot?: number;
         weekendPricePerSlot?: number | null;
         weekendDays?: number[];
     }
