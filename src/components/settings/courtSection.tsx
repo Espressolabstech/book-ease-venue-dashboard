@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, LayoutGrid, Pencil, Plus, Save, Trash2, Wrench, X, Zap } from 'lucide-react';
-import { Button } from '../ui/button';
+import { ChevronRight, LayoutGrid, Pencil, Plus, Save, Trash2, Wrench, X, Zap } from 'lucide-react';import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import CourtForm from './courtForm';
 import { Badge } from '../ui/badge';
@@ -17,7 +16,6 @@ const CourtsSection = ({
     sport,
     allCourts,
     courts,
-    peakConfig,
     downtimes,
     editingCourtId,
     editForm,
@@ -38,7 +36,6 @@ const CourtsSection = ({
     sport: string;
     allCourts: CourtData[];
     courts: CourtData[];
-    peakConfig: SportPeakConfig;
     downtimes: ScheduledDowntime[];
     editingCourtId: string | null;
     editForm: CourtData | null;
@@ -156,32 +153,11 @@ const CourtsSection = ({
 
     return (
         <div className="space-y-4">
-            {/* Sport-level pricing summary */}
-            <div className="flex items-center gap-3 rounded-lg bg-accent/50 p-3">
-                <Zap className="h-4 w-4 text-primary shrink-0" />
-                <p className="text-sm text-foreground">
-                    <span className="font-medium">
-                        {isClub ? `${peakConfig.offPeakPrice} pts` : `₹${peakConfig.offPeakPrice}`}
-                    </span>
-                    <span className="text-muted-foreground"> off-peak · </span>
-                    <span className="font-medium">
-                        {isClub ? `${peakConfig.peakPrice} pts` : `₹${peakConfig.peakPrice}`}
-                    </span>
-                    <span className="text-muted-foreground"> peak</span>
-                </p>
-            </div>
-
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-between px-1">
+                <h2 className="text-2xl font-semibold text-foreground">{sport}</h2>
+                <span className="text-sm text-muted-foreground">
                     {courts.length} court{courts.length !== 1 ? 's' : ''}
-                </p>
-                <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onSetShowAdd(true)}
-                >
-                    <Plus className="mr-1 h-4 w-4" /> Add Court
-                </Button>
+                </span>
             </div>
 
             {showAddForm && (
