@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { canEdit, useVenueRole } from '../../hooks/useVenueRole';
@@ -20,6 +20,18 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../../components/ui/dialog';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Switch } from '../../components/ui/switch';
 import { path } from '../../navigation/commanPaths';
 import {
     getCourts,
@@ -55,6 +67,8 @@ import {
     updateBookingPolicy,
 } from '../../api/adapters/bookingPolicy';
 import { SPORT_DISPLAY, SPORT_API } from '../../utils/settings';
+import { API_TO_SURFACE, SURFACE_TO_API, envFromApi, envToApi, getSurfaceOptions } from '../../utils/sportFields';
+import type { EnvironmentOption } from '../../utils/sportFields';
 
 // ── Day index helpers ─────────────────────────────────────────────────────────
 const DAY_NAMES = [
@@ -90,10 +104,8 @@ function courtModelToCourtData(c: CourtModel, isClub = false): CourtData {
         id: c.id,
         name: c.name,
         sport: SPORT_DISPLAY[c.sport] ?? c.sport,
-        surfaceMaterial: c.surface,
-        lighting:
-            c.environment === 'INDOOR' ? 'Indoor Lighting' : 'LED Floodlights',
-        roofed: c.environment === 'INDOOR',
+        environment: envFromApi(c.environment),
+        surfaceMaterial: API_TO_SURFACE[c.surface] ?? c.surface,
         isActive: c.status === 'ACTIVE',
         pricePerSlot: isClub
             ? (c.courtPricings[0]?.pointsPerSlot ?? c.courtPricings[0]?.pricePerSlot ?? 0)
@@ -163,9 +175,8 @@ const Settings = () => {
     const [newCourt, setNewCourt] = useState<Omit<CourtData, 'id'>>({
         name: '',
         sport: activeSport,
+        environment: 'Indoor',
         surfaceMaterial: '',
-        lighting: 'LED Floodlights',
-        roofed: false,
         isActive: true,
         pricePerSlot: 0,
     });
@@ -382,10 +393,10 @@ const Settings = () => {
     }, [courtsRaw, fetchPeakHours]);
 
     const sectionTitle: Record<Section, string> = {
-        hub: 'Settings',
+        hub: 'Venue Management',
         hours: 'Operating Hours',
-        peak: 'Peak Hours & Pricing',
-        courts: activeSport ? `${activeSport} Courts` : 'Add Court',
+        peak: 'Pricing & Peak Hours',
+        courts: activeSport ? `${activeSport} Courts` : 'Manage Courts',
         downtime: 'Scheduled Downtime',
         facility: 'Facility Info',
         policy: 'Booking Rules',
@@ -393,7 +404,13 @@ const Settings = () => {
 
     const goBack = () => {
         if (section === 'hub') navigate(path.dashboard);
-        else {
+        else if (section === 'courts' && activeSport) {
+            // From sport-specific courts view → go back to sport picker
+            setActiveSport('');
+            setShowAddForm(false);
+            setEditingCourtId(null);
+            setEditForm(null);
+        } else {
             setSection('hub');
             setShowAddForm(false);
             setEditingCourtId(null);
@@ -600,6 +617,25 @@ const Settings = () => {
         }
     };
 
+    // ── First-time pricing dialog ─────────────────────────────────────────────
+    const [pricingDialogOpen, setPricingDialogOpen] = useState(false);
+    const [pendingCourt, setPendingCourt] = useState<Omit<CourtData, 'id'> | null>(null);
+    const [pendingPricing, setPendingPricing] = useState<{
+        offPeakPrice: string;
+        peakEnabled: boolean;
+        peakPrice: string;
+        startTime: string;
+        endTime: string;
+        days: string[];
+    }>({
+        offPeakPrice: '',
+        peakEnabled: false,
+        peakPrice: '',
+        startTime: '17:00',
+        endTime: '22:00',
+        days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    });
+
     // ── Court CRUD ────────────────────────────────────────────────────────────
     const startEdit = (court: CourtData) => {
         setEditingCourtId(court.id);
@@ -612,9 +648,7 @@ const Settings = () => {
     const saveEdit = async () => {
         if (!editForm) return;
         try {
-            const environment: CourtEnvironment = editForm.roofed
-                ? 'INDOOR'
-                : 'OUTDOOR';
+            const environment: CourtEnvironment = envToApi(editForm.environment);
             const status: CourtStatus = editForm.isActive
                 ? 'ACTIVE'
                 : 'INACTIVE';
@@ -640,76 +674,88 @@ const Settings = () => {
             toast.error('Failed to update court');
         }
     };
-    const addCourt = async () => {
-        if (!newCourt.name.trim()) {
-            toast.error('Court name is required');
-            return;
-        }
-        if (!newCourt.surfaceMaterial) {
-            toast.error('Surface material is required');
-            return;
-        }
-        if (!newCourt.pricePerSlot || newCourt.pricePerSlot <= 0) {
-            toast.error(isClub ? 'Points per slot is required' : 'Price per slot is required');
-            return;
-        }
+    const commitCourt = async (court: Omit<CourtData, 'id'>) => {
         try {
-            const sport: SportType = (SPORT_API[newCourt.sport] ?? 'PADEL') as SportType;
-            const environment: CourtEnvironment = newCourt.roofed
-                ? 'INDOOR'
-                : 'OUTDOOR';
-            // Map display surface back to API enum — fallback to ARTIFICIAL_GRASS
-            const surfaceMap: Record<string, CourtSurface> = {
-                'Artificial Turf': 'ARTIFICIAL_GRASS',
-                'Panoramic Glass': 'PANORAMIC_GLASS',
-                'Synthetic Grass': 'ARTIFICIAL_GRASS',
-                'Sand-filled Turf': 'SAND_FILLED_ARTIFICIAL_GRASS',
-                'Cushioned Acrylic': 'CUSHIONED_ACRYLIC',
-                'Hard Court': 'ASPHALT',
-                'Indoor Wood': 'CUSHIONED_ACRYLIC',
-                'Outdoor Concrete': 'CONCRETE',
-            };
-            // Auto-generate time slots from venue operating hours (one slot per open day)
+            const sport: SportType = (SPORT_API[court.sport] ?? 'PADEL') as SportType;
+            const environment: CourtEnvironment = envToApi(court.environment);
             const timeSlots = hours
                 .map((h, i) =>
                     h.isOpen
-                        ? {
-                              dayOfWeek: i,
-                              startTime: h.openTime,
-                              endTime: h.closeTime,
-                          }
+                        ? { dayOfWeek: i, startTime: h.openTime, endTime: h.closeTime }
                         : null,
                 )
                 .filter(Boolean) as CreateCourtTimeSlotPayload[];
 
             await createCourt({
-                name: newCourt.name,
+                name: court.name,
                 sport,
                 environment,
-                surface:
-                    surfaceMap[newCourt.surfaceMaterial] ?? 'ARTIFICIAL_GRASS',
+                surface: SURFACE_TO_API[court.surfaceMaterial] ?? 'ARTIFICIAL_GRASS',
                 timeSlots,
                 pricing: isClub
-                    ? { pricePerSlot: 0, pointsPerSlot: newCourt.pricePerSlot }
-                    : { pricePerSlot: newCourt.pricePerSlot },
+                    ? { pricePerSlot: 0, pointsPerSlot: court.pricePerSlot }
+                    : { pricePerSlot: court.pricePerSlot },
             });
-            const addedSport = newCourt.sport;
+            const addedSport = court.sport;
             setShowAddForm(false);
             setActiveSport(addedSport);
-            setNewCourt({
-                name: '',
-                sport: addedSport,
-                surfaceMaterial: '',
-                lighting: 'LED Floodlights',
-                roofed: false,
-                isActive: true,
-                pricePerSlot: 0,
-            });
+            setNewCourt({ name: '', sport: addedSport, environment: 'Indoor', surfaceMaterial: '', isActive: true, pricePerSlot: 0 });
             toast.success('Court added');
             fetchCourts();
         } catch {
             toast.error('Failed to add court');
         }
+    };
+
+    const addCourt = async () => {
+        if (!newCourt.name.trim()) {
+            toast.error('Court name is required');
+            return;
+        }
+        const availableSurfaces = getSurfaceOptions(newCourt.sport, newCourt.environment as EnvironmentOption);
+        if (availableSurfaces.length > 0 && !newCourt.surfaceMaterial) {
+            toast.error('Surface material is required');
+            return;
+        }
+        // If this sport has no pricing yet, show the pricing dialog first
+        const existingConfig = peakConfigs.find((c) => c.sport === newCourt.sport);
+        if (!existingConfig || existingConfig.offPeakPrice <= 0) {
+            setPendingCourt({ ...newCourt });
+            setPendingPricing({ offPeakPrice: '', peakEnabled: false, peakPrice: '', startTime: '17:00', endTime: '22:00', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] });
+            setPricingDialogOpen(true);
+            return;
+        }
+        await commitCourt(newCourt);
+    };
+
+    const confirmPricingAndAddCourt = async () => {
+        if (!pendingCourt) return;
+        const off = parseFloat(pendingPricing.offPeakPrice);
+        if (!off || off <= 0) { toast.error('Enter a valid rate'); return; }
+        const peak = pendingPricing.peakEnabled ? parseFloat(pendingPricing.peakPrice) : off;
+        if (pendingPricing.peakEnabled && (!peak || peak <= off)) {
+            toast.error('Peak rate must be higher than standard rate');
+            return;
+        }
+        const courtToAdd = { ...pendingCourt, pricePerSlot: off };
+        // Store pricing config locally so it's available for future courts of same sport
+        setPeakConfigs((prev) => {
+            const others = prev.filter((c) => c.sport !== courtToAdd.sport);
+            return [
+                ...others,
+                {
+                    sport: courtToAdd.sport,
+                    offPeakPrice: off,
+                    peakPrice: peak,
+                    slots: pendingPricing.peakEnabled
+                        ? [{ id: `p${Date.now()}`, startTime: pendingPricing.startTime, endTime: pendingPricing.endTime, days: pendingPricing.days.length ? pendingPricing.days : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] }]
+                        : [],
+                },
+            ];
+        });
+        setPricingDialogOpen(false);
+        setPendingCourt(null);
+        await commitCourt(courtToAdd);
     };
     const handleDeleteCourt = async () => {
         if (!deleteCourtId) return;
@@ -850,10 +896,14 @@ const Settings = () => {
                         onNavigate={(s, sport) => {
                             setSection(s);
 
-                            if (sport === '__new__') {
+                            if (sport === '') {
+                                // Navigate to sport picker
+                                setActiveSport('');
+                                setShowAddForm(false);
+                            } else if (sport === '__new__') {
                                 setActiveSport('');
                                 setShowAddForm(true);
-                                setNewCourt({ name: '', sport: 'Padel', surfaceMaterial: '', lighting: 'LED Floodlights', roofed: false, isActive: true, pricePerSlot: 0 });
+                                setNewCourt({ name: '', sport: 'Padel', environment: 'Indoor', surfaceMaterial: '', isActive: true, pricePerSlot: 0 });
                             } else if (sport) {
                                 setActiveSport(sport);
                                 setNewCourt((p) => ({ ...p, sport }));
@@ -887,6 +937,7 @@ const Settings = () => {
                 {section === 'courts' && (
                     <CourtsSection
                         sport={activeSport}
+                        allCourts={courts}
                         courts={activeSport ? courts.filter((c) => c.sport === activeSport) : []}
                         peakConfig={getSportPeak(activeSport)}
                         isClub={isClub}
@@ -895,6 +946,10 @@ const Settings = () => {
                         editForm={editForm}
                         showAddForm={showAddForm}
                         newCourt={newCourt}
+                        onSelectSport={(s) => {
+                            setActiveSport(s);
+                            setNewCourt((p) => ({ ...p, sport: s }));
+                        }}
                         onStartEdit={startEdit}
                         onCancelEdit={cancelEdit}
                         onSaveEdit={saveEdit}
@@ -907,6 +962,7 @@ const Settings = () => {
                         onEditFormChange={(u) =>
                             setEditForm((p) => (p ? { ...p, ...u } : p))
                         }
+                        onNavigate={(s) => setSection(s)}
                     />
                 )}
                 {section === 'downtime' && (
@@ -1020,6 +1076,132 @@ const Settings = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ── First-time pricing dialog ── */}
+            <Dialog
+                open={pricingDialogOpen}
+                onOpenChange={(open) => {
+                    if (!open) { setPricingDialogOpen(false); setPendingCourt(null); }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Set {pendingCourt?.sport} pricing</DialogTitle>
+                        <DialogDescription>
+                            Set a rate before adding your first {pendingCourt?.sport} court. All {pendingCourt?.sport} courts share these rates — you can refine them later under Pricing.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        {!pendingPricing.peakEnabled ? (
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-medium text-muted-foreground">
+                                    {isClub ? 'Points per slot' : 'Rate per slot'}
+                                </Label>
+                                <div className="relative">
+                                    {!isClub && (
+                                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base font-medium text-muted-foreground">₹</span>
+                                    )}
+                                    <Input
+                                        type="number"
+                                        inputMode="numeric"
+                                        value={pendingPricing.offPeakPrice}
+                                        onChange={(e) => setPendingPricing((p) => ({ ...p, offPeakPrice: e.target.value }))}
+                                        placeholder="150"
+                                        className={`h-11 text-base font-medium ${!isClub ? 'pl-7' : ''}`}
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium text-muted-foreground">Standard rate</Label>
+                                    <div className="relative">
+                                        {!isClub && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₹</span>}
+                                        <Input
+                                            type="number"
+                                            inputMode="numeric"
+                                            value={pendingPricing.offPeakPrice}
+                                            onChange={(e) => setPendingPricing((p) => ({ ...p, offPeakPrice: e.target.value }))}
+                                            className={`h-11 text-base font-medium ${!isClub ? 'pl-7' : ''}`}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-xs font-medium text-muted-foreground">Peak rate</Label>
+                                    <div className="relative">
+                                        {!isClub && <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₹</span>}
+                                        <Input
+                                            type="number"
+                                            inputMode="numeric"
+                                            value={pendingPricing.peakPrice}
+                                            onChange={(e) => setPendingPricing((p) => ({ ...p, peakPrice: e.target.value }))}
+                                            className={`h-11 text-base font-medium ${!isClub ? 'pl-7' : ''}`}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                            <div>
+                                <p className="text-sm font-medium text-foreground">Enable peak pricing</p>
+                                <p className="text-xs text-muted-foreground">Charge more during high-demand windows</p>
+                            </div>
+                            <Switch
+                                checked={pendingPricing.peakEnabled}
+                                onCheckedChange={(v) => setPendingPricing((p) => {
+                                    const off = parseFloat(p.offPeakPrice) || 0;
+                                    return {
+                                        ...p,
+                                        peakEnabled: v,
+                                        peakPrice: v && !p.peakPrice && off > 0 ? String(Math.round(off * 1.25)) : p.peakPrice,
+                                    };
+                                })}
+                            />
+                        </div>
+
+                        {pendingPricing.peakEnabled && (
+                            <div className="space-y-2">
+                                <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Peak window</Label>
+                                <div className="flex items-center gap-1.5">
+                                    <Input type="time" value={pendingPricing.startTime} onChange={(e) => setPendingPricing((p) => ({ ...p, startTime: e.target.value }))} className="h-9 text-xs" />
+                                    <span className="text-xs text-muted-foreground">to</span>
+                                    <Input type="time" value={pendingPricing.endTime} onChange={(e) => setPendingPricing((p) => ({ ...p, endTime: e.target.value }))} className="h-9 text-xs" />
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((day) => {
+                                        const active = pendingPricing.days.includes(day);
+                                        return (
+                                            <button
+                                                key={day}
+                                                type="button"
+                                                onClick={() => setPendingPricing((p) => ({
+                                                    ...p,
+                                                    days: active ? p.days.filter((d) => d !== day) : [...p.days, day],
+                                                }))}
+                                                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+                                            >
+                                                {day}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => { setPricingDialogOpen(false); setPendingCourt(null); }}>
+                            Cancel
+                        </Button>
+                        <Button onClick={confirmPricingAndAddCourt}>
+                            <Save className="mr-1.5 h-4 w-4" /> Save & add court
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
