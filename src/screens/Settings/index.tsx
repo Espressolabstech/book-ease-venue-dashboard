@@ -939,7 +939,6 @@ const Settings = () => {
                         sport={activeSport}
                         allCourts={courts}
                         courts={activeSport ? courts.filter((c) => c.sport === activeSport) : []}
-                        peakConfig={getSportPeak(activeSport)}
                         isClub={isClub}
                         downtimes={downtimes}
                         editingCourtId={editingCourtId}

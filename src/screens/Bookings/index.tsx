@@ -45,6 +45,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from '../../components/ui/badge';
 import { loadRazorpayScript, openRazorpayCheckout } from '../../utils/razorpay';
 import { path } from '../../navigation/commanPaths';
+import { SPORT_DISPLAY } from '../../utils/settings';
 
 const bookingStatusColors: Record<BookingStatus, string> = {
     PENDING: 'bg-amber-100 text-amber-800',
@@ -1092,7 +1093,9 @@ const Booking = () => {
                                             Court
                                         </span>
                                         <span className="text-foreground">
-                                            {selectedCourtData?.name}
+                                            {selectedCourtData
+                                                ? `${SPORT_DISPLAY[selectedCourtData.sport] ?? selectedCourtData.sport} · ${selectedCourtData.name}`
+                                                : '—'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
@@ -1177,7 +1180,9 @@ const Booking = () => {
                                             Court
                                         </span>
                                         <span className="text-foreground">
-                                            {selectedCourtData?.name}
+                                            {selectedCourtData
+                                                ? `${SPORT_DISPLAY[selectedCourtData.sport] ?? selectedCourtData.sport} · ${selectedCourtData.name}`
+                                                : '—'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
