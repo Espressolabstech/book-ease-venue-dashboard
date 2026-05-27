@@ -53,15 +53,18 @@ declare global {
         court?: { id: string; name: string; sport: string };
     }
 
+    type EnvironmentOption = 'Indoor' | 'Covered Outdoor' | 'Outdoor';
+
     interface CourtData {
         id: string;
         name: string;
         sport: string;
+        environment: EnvironmentOption;
         surfaceMaterial: string;
-        lighting: string;
-        roofed: boolean;
         isActive: boolean;
         pricePerSlot: number;
+        format?: string;
+        courtSize?: string;
     }
 
     interface OperatingHours {
