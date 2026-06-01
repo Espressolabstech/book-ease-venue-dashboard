@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
     DEFAULT_HOURS,
-    PADEL_SURFACES,
-    PICKLEBALL_SURFACES,
+    ALL_SPORTS,
+    SPORT_SURFACES,
+    SPORT_EMOJI,
 } from '../../utils/court';
 import type { DaySchedule } from './ScheduleBuilder';
 import { toast } from 'sonner';
@@ -284,11 +285,9 @@ const StepCourtSetup = ({
     };
 
     const surfaces =
-        form.sport === 'Padel'
-            ? PADEL_SURFACES
-            : form.sport === 'Pickleball'
-              ? PICKLEBALL_SURFACES
-              : [];
+        form.sport && SPORT_SURFACES[form.sport]
+            ? SPORT_SURFACES[form.sport]
+            : [];
 
     // Save & Continue
     useEffect(() => {
@@ -373,9 +372,7 @@ const StepCourtSetup = ({
                                         'h-32 flex items-center justify-center',
                                         court.photo_url
                                             ? ''
-                                            : court.sport === 'Padel'
-                                              ? 'bg-[hsl(var(--admin-navy))]/5'
-                                              : 'bg-[hsl(var(--admin-lime))]/5',
+                                            : 'bg-[hsl(var(--admin-navy))]/5',
                                     )}
                                 >
                                     {court.photo_url ? (
@@ -386,9 +383,7 @@ const StepCourtSetup = ({
                                         />
                                     ) : (
                                         <span className="text-3xl">
-                                            {court.sport === 'Padel'
-                                                ? '🏸'
-                                                : '🏓'}
+                                            {SPORT_EMOJI[court.sport] ?? '🏟️'}
                                         </span>
                                     )}
                                 </div>
@@ -419,14 +414,7 @@ const StepCourtSetup = ({
                                         )}
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
-                                        <span
-                                            className={cn(
-                                                'rounded-full px-2 py-0.5 text-xs font-medium',
-                                                court.sport === 'Padel'
-                                                    ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
-                                                    : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))]',
-                                            )}
-                                        >
+                                        <span className="rounded-full bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] px-2 py-0.5 text-xs font-medium">
                                             {court.sport}
                                         </span>
                                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
@@ -479,7 +467,7 @@ const StepCourtSetup = ({
                                         ...f,
                                         name: e.target.value,
                                     }));
-                                    setFormErrors((e) => ({ ...e, name: '' }));
+                                    setFormErrors((prev) => ({ ...prev, name: '' }));
                                 }}
                                 className={cn(
                                     formErrors.name && 'border-destructive',
@@ -495,8 +483,8 @@ const StepCourtSetup = ({
                         {/* Sport */}
                         <div className="space-y-1.5">
                             <Label>Sport Type *</Label>
-                            <div className="flex gap-2">
-                                {['Padel', 'Pickleball'].map((s) => (
+                            <div className="flex flex-wrap gap-2">
+                                {ALL_SPORTS.map((s) => (
                                     <button
                                         key={s}
                                         onClick={() =>
@@ -507,15 +495,13 @@ const StepCourtSetup = ({
                                             }))
                                         }
                                         className={cn(
-                                            'rounded-full px-5 py-2 text-sm font-medium transition-all',
+                                            'rounded-full px-4 py-1.5 text-sm font-medium transition-all border',
                                             form.sport === s
-                                                ? s === 'Padel'
-                                                    ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] scale-105'
-                                                    : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))] scale-105'
-                                                : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                                                ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] border-[hsl(var(--admin-navy))] scale-105'
+                                                : 'bg-muted text-muted-foreground border-transparent hover:bg-muted/80',
                                         )}
                                     >
-                                        {s}
+                                        {SPORT_EMOJI[s] ?? '🏟️'} {s}
                                     </button>
                                 ))}
                             </div>

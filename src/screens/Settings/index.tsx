@@ -234,6 +234,7 @@ const Settings = () => {
                 if (!bySport[sport]) {
                     bySport[sport] = {
                         sport,
+                        peakEnabled: peaks.length > 0,
                         offPeakPrice,
                         peakPrice: 0,
                         slots: [],
@@ -241,11 +242,14 @@ const Settings = () => {
                 }
                 const config = bySport[sport];
                 // Use the first non-empty court's prices as representative
-                if (peaks.length > 0 && config.peakPrice === 0) {
-                    config.peakPrice = isClubRef.current
-                        ? (peaks[0].pointsPerSlot ?? peaks[0].pricePerSlot)
-                        : peaks[0].pricePerSlot;
-                    config.offPeakPrice = offPeakPrice;
+                if (peaks.length > 0) {
+                    config.peakEnabled = true;
+                    if (config.peakPrice === 0) {
+                        config.peakPrice = isClubRef.current
+                            ? (peaks[0].pointsPerSlot ?? peaks[0].pricePerSlot)
+                            : peaks[0].pricePerSlot;
+                        config.offPeakPrice = offPeakPrice;
+                    }
                 }
                 // Build a dedup key per unique {startTime, endTime, dayOfWeek}
                 const seen = new Set(
@@ -458,10 +462,19 @@ const Settings = () => {
     const getSportPeak = (sport: string) =>
         peakConfigs.find((c) => c.sport === sport) || {
             sport,
+            peakEnabled: false,
             peakPrice: 0,
             offPeakPrice: 0,
             slots: [],
         };
+
+    const togglePeakEnabled = (sport: string) => {
+        setPeakConfigs((prev) =>
+            prev.map((c) =>
+                c.sport === sport ? { ...c, peakEnabled: !c.peakEnabled } : c,
+            ),
+        );
+    };
 
     const updateSportPrice = (
         sport: string,
@@ -745,6 +758,7 @@ const Settings = () => {
                 ...others,
                 {
                     sport: courtToAdd.sport,
+                    peakEnabled: pendingPricing.peakEnabled,
                     offPeakPrice: off,
                     peakPrice: peak,
                     slots: pendingPricing.peakEnabled
@@ -928,6 +942,7 @@ const Settings = () => {
                         removeSlot={removePeakSlot}
                         toggleDay={togglePeakDay}
                         updatePrice={updateSportPrice}
+                        togglePeakEnabled={togglePeakEnabled}
                         onSave={savePeakHours}
                         saving={savingPeak}
                         readOnly={readOnly}

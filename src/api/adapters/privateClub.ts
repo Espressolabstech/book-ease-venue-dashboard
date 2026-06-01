@@ -47,3 +47,14 @@ export const allocateMonthlyPoints = async (
     payload?: AllocatePointsPayload,
 ): Promise<AllocatePointsResponse> =>
     apiClient({ url: endpoints.privateClubAllocatePoints, method: 'POST', data: payload ?? {} });
+
+export const bulkAddClubMembers = async (
+    members: { firstName: string; lastName: string; phone: string; countryCode?: string }[],
+): Promise<{
+    data: {
+        added: { phone: string; name: string }[];
+        skipped: { phone: string; reason: string }[];
+        errors: { phone: string; reason: string }[];
+    };
+}> =>
+    apiClient({ url: endpoints.privateClubMembersBulk, method: 'POST', data: { members } });

@@ -84,6 +84,7 @@ declare global {
 
     interface SportPeakConfig {
         sport: string;
+        peakEnabled: boolean;
         peakPrice: number;
         offPeakPrice: number;
         slots: PeakHourSlot[];
