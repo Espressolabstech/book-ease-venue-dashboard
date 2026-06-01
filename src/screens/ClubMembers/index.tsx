@@ -13,6 +13,11 @@ import {
     RefreshCw,
     X,
     Dumbbell,
+    Upload,
+    Download,
+    CheckCircle2,
+    AlertCircle,
+    SkipForward,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
@@ -40,6 +45,7 @@ import {
     updatePrivateClubConfig,
     listClubMembers,
     addClubMember,
+    bulkAddClubMembers,
     adjustPoints,
     allocateMonthlyPoints,
     updateClubMember,
@@ -198,6 +204,260 @@ function MemberCard({
                 )}
             </CardContent>
         </Card>
+    );
+}
+
+// ── CSV Import Dialog ─────────────────────────────────────────────────────────
+
+type CsvRow = { firstName: string; lastName: string; phone: string };
+
+type ImportResult = {
+    added: { phone: string; name: string }[];
+    skipped: { phone: string; reason: string }[];
+    errors: { phone: string; reason: string }[];
+};
+
+function parseCsv(text: string): { rows: CsvRow[]; parseErrors: string[] } {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    if (lines.length < 2) return { rows: [], parseErrors: ['File appears empty or has no data rows'] };
+
+    const header = lines[0].split(',').map((h) => h.trim().toLowerCase().replace(/\s+/g, ''));
+    const firstNameIdx = header.findIndex((h) => h === 'firstname' || h === 'first_name' || h === 'first name');
+    const lastNameIdx = header.findIndex((h) => h === 'lastname' || h === 'last_name' || h === 'last name');
+    const phoneIdx = header.findIndex((h) => h === 'mobile' || h === 'phone' || h === 'mobilenumber' || h === 'phonenumber');
+
+    if (firstNameIdx === -1 || lastNameIdx === -1 || phoneIdx === -1) {
+        return {
+            rows: [],
+            parseErrors: [
+                `Missing required columns. Expected: First Name, Last Name, Mobile. Found: ${lines[0]}`,
+            ],
+        };
+    }
+
+    const rows: CsvRow[] = [];
+    const parseErrors: string[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+        const firstName = cols[firstNameIdx] ?? '';
+        const lastName = cols[lastNameIdx] ?? '';
+        const phone = cols[phoneIdx] ?? '';
+        if (!firstName && !lastName && !phone) continue;
+        if (!firstName || !lastName || !phone) {
+            parseErrors.push(`Row ${i + 1}: missing value(s) — skipped`);
+            continue;
+        }
+        rows.push({ firstName, lastName, phone });
+    }
+
+    return { rows, parseErrors };
+}
+
+function downloadTemplate() {
+    const csv = 'First Name,Last Name,Mobile\nRahul,Sharma,9876543210\nPriya,Singh,9123456789\n';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'members_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function CsvImportDialog({
+    open,
+    onClose,
+    onSuccess,
+}: {
+    open: boolean;
+    onClose: () => void;
+    onSuccess: () => void;
+}) {
+    const [stage, setStage] = useState<'upload' | 'preview' | 'result'>('upload');
+    const [rows, setRows] = useState<CsvRow[]>([]);
+    const [parseErrors, setParseErrors] = useState<string[]>([]);
+    const [result, setResult] = useState<ImportResult | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const reset = () => {
+        setStage('upload');
+        setRows([]);
+        setParseErrors([]);
+        setResult(null);
+        setLoading(false);
+    };
+
+    const handleClose = () => {
+        reset();
+        onClose();
+    };
+
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (!file.name.endsWith('.csv')) {
+            toast.error('Please upload a .csv file');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const text = ev.target?.result as string;
+            const { rows: parsed, parseErrors: errs } = parseCsv(text);
+            setRows(parsed);
+            setParseErrors(errs);
+            if (parsed.length > 0) setStage('preview');
+            else toast.error(errs[0] ?? 'No valid rows found in file');
+        };
+        reader.readAsText(file);
+    };
+
+    const handleImport = async () => {
+        setLoading(true);
+        try {
+            const res = await bulkAddClubMembers(rows);
+            setResult(res.data);
+            setStage('result');
+            onSuccess();
+        } catch (err: any) {
+            toast.error(err?.message ?? 'Import failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Import Members via CSV</DialogTitle>
+                </DialogHeader>
+
+                {stage === 'upload' && (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Upload a CSV with columns: <strong>First Name</strong>, <strong>Last Name</strong>, <strong>Mobile</strong>.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={downloadTemplate}
+                            className="flex items-center gap-2 text-xs text-primary underline-offset-2 hover:underline"
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            Download template CSV
+                        </button>
+
+                        <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-8 cursor-pointer hover:border-muted-foreground/50 transition-colors">
+                            <Upload className="h-8 w-8 text-muted-foreground" />
+                            <span className="text-sm font-medium">Click to select CSV file</span>
+                            <span className="text-xs text-muted-foreground">Up to 500 members at once</span>
+                            <input type="file" accept=".csv" className="hidden" onChange={handleFile} />
+                        </label>
+
+                        {parseErrors.length > 0 && (
+                            <div className="rounded-lg bg-destructive/5 border border-destructive/20 p-3 space-y-1">
+                                {parseErrors.map((e, i) => (
+                                    <p key={i} className="text-xs text-destructive">{e}</p>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {stage === 'preview' && (
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            {rows.length} member{rows.length !== 1 ? 's' : ''} ready to import.
+                            {parseErrors.length > 0 && ` (${parseErrors.length} row${parseErrors.length !== 1 ? 's' : ''} skipped due to errors)`}
+                        </p>
+
+                        {parseErrors.length > 0 && (
+                            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-1 max-h-20 overflow-y-auto">
+                                {parseErrors.map((e, i) => (
+                                    <p key={i} className="text-xs text-amber-700">{e}</p>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="max-h-56 overflow-y-auto rounded-xl border">
+                            <table className="w-full text-xs">
+                                <thead className="bg-muted sticky top-0">
+                                    <tr>
+                                        <th className="px-3 py-2 text-left font-medium">#</th>
+                                        <th className="px-3 py-2 text-left font-medium">Name</th>
+                                        <th className="px-3 py-2 text-left font-medium">Mobile</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows.map((r, i) => (
+                                        <tr key={i} className="border-t">
+                                            <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
+                                            <td className="px-3 py-1.5">{r.firstName} {r.lastName}</td>
+                                            <td className="px-3 py-1.5 font-mono">{r.phone}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <DialogFooter>
+                            <Button variant="outline" onClick={reset} disabled={loading}>
+                                Back
+                            </Button>
+                            <Button onClick={handleImport} disabled={loading}>
+                                {loading ? 'Importing…' : `Import ${rows.length} Members`}
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                )}
+
+                {stage === 'result' && result && (
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="rounded-xl bg-green-50 border border-green-200 p-3">
+                                <CheckCircle2 className="mx-auto h-5 w-5 text-green-600 mb-1" />
+                                <p className="text-lg font-bold text-green-700">{result.added.length}</p>
+                                <p className="text-[10px] text-green-600">Added</p>
+                            </div>
+                            <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                                <SkipForward className="mx-auto h-5 w-5 text-amber-600 mb-1" />
+                                <p className="text-lg font-bold text-amber-700">{result.skipped.length}</p>
+                                <p className="text-[10px] text-amber-600">Skipped</p>
+                            </div>
+                            <div className="rounded-xl bg-red-50 border border-red-200 p-3">
+                                <AlertCircle className="mx-auto h-5 w-5 text-red-500 mb-1" />
+                                <p className="text-lg font-bold text-red-600">{result.errors.length}</p>
+                                <p className="text-[10px] text-red-500">Errors</p>
+                            </div>
+                        </div>
+
+                        {result.skipped.length > 0 && (
+                            <div className="rounded-lg border p-3 max-h-28 overflow-y-auto space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground mb-1">Skipped (already members)</p>
+                                {result.skipped.map((s, i) => (
+                                    <p key={i} className="text-xs text-muted-foreground">{s.phone} — {s.reason}</p>
+                                ))}
+                            </div>
+                        )}
+
+                        {result.errors.length > 0 && (
+                            <div className="rounded-lg border border-destructive/20 p-3 max-h-28 overflow-y-auto space-y-1">
+                                <p className="text-xs font-medium text-destructive mb-1">Errors</p>
+                                {result.errors.map((e, i) => (
+                                    <p key={i} className="text-xs text-destructive">{e.phone} — {e.reason}</p>
+                                ))}
+                            </div>
+                        )}
+
+                        <DialogFooter>
+                            <Button onClick={handleClose} className="w-full">Done</Button>
+                        </DialogFooter>
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -997,6 +1257,7 @@ const ClubMembers = () => {
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [showAddDialog, setShowAddDialog] = useState(false);
+    const [showImportDialog, setShowImportDialog] = useState(false);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [adjustTarget, setAdjustTarget] = useState<{
         member: ClubMemberDetail;
@@ -1039,8 +1300,16 @@ const ClubMembers = () => {
                         <p className="text-xs opacity-80">Points & membership management</p>
                     </div>
                     <button
+                        onClick={() => setShowImportDialog(true)}
+                        className="rounded-full bg-primary-foreground/20 p-1.5"
+                        title="Import members via CSV"
+                    >
+                        <Upload className="h-4 w-4" />
+                    </button>
+                    <button
                         onClick={() => setShowAddDialog(true)}
                         className="rounded-full bg-primary-foreground/20 p-1.5"
+                        title="Add single member"
                     >
                         <Plus className="h-4 w-4" />
                     </button>
@@ -1134,6 +1403,13 @@ const ClubMembers = () => {
                     </TabsContent>
                 </Tabs>
             </main>
+
+            {/* CSV Import Dialog */}
+            <CsvImportDialog
+                open={showImportDialog}
+                onClose={() => setShowImportDialog(false)}
+                onSuccess={refetchMembers}
+            />
 
             {/* Add Member Dialog */}
             <AddMemberDialog

@@ -9,7 +9,9 @@ const VenueInvite = () => {
 
     useEffect(() => {
         const token = searchParams.get('token');
-        const venueId = searchParams.get('venueId');
+        // Strip anything after the CUID (guards against pasting raw JSON with adjacent fields)
+        const rawVenueId = searchParams.get('venueId') ?? '';
+        const venueId = rawVenueId.match(/^c[0-9a-z]{24}/)?.[0] ?? '';
 
         if (!token || !venueId) {
             navigate('/login', { replace: true });

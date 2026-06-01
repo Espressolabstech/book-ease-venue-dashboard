@@ -1319,7 +1319,11 @@ const Booking = () => {
                         <div className="space-y-4 pb-8">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="font-semibold text-foreground">{selectedBookedBooking.court?.name}</p>
+                                    <p className="font-semibold text-foreground">
+                                        {selectedBookedBooking.court
+                                            ? `${(SPORT_DISPLAY as Record<string, string>)[selectedBookedBooking.court.sport] ?? selectedBookedBooking.court.sport} · ${selectedBookedBooking.court.name}`
+                                            : '—'}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">{selectedBookedBooking.venue?.name}</p>
                                 </div>
                                 <div className="flex items-center gap-2">

@@ -1,4 +1,5 @@
 import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
@@ -76,6 +77,7 @@ const PeakSection = ({
     removeSlot,
     toggleDay,
     updatePrice,
+    togglePeakEnabled,
     onSave,
     saving,
     readOnly = false,
@@ -87,6 +89,7 @@ const PeakSection = ({
     removeSlot: (sport: string, slotId: string) => void;
     toggleDay: (sport: string, slotId: string, day: string) => void;
     updatePrice: (sport: string, field: 'peakPrice' | 'offPeakPrice', value: number) => void;
+    togglePeakEnabled: (sport: string) => void;
     onSave: () => void;
     saving?: boolean;
     readOnly?: boolean;
@@ -159,15 +162,28 @@ const PeakSection = ({
                 return (
                     <Card key={config.sport}>
                         <CardContent className="p-4 space-y-4">
-                            <h3 className="font-semibold text-foreground text-lg">
-                                {config.sport}
-                            </h3>
+                            {/* Header: sport name + peak toggle */}
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold text-foreground text-lg">
+                                    {config.sport}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">
+                                        {config.peakEnabled ? 'Peak pricing on' : 'Single rate'}
+                                    </span>
+                                    <Switch
+                                        checked={config.peakEnabled}
+                                        onCheckedChange={() => !readOnly && togglePeakEnabled(config.sport)}
+                                        disabled={readOnly}
+                                    />
+                                </div>
+                            </div>
 
-                            {/* Pricing */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Single-rate mode */}
+                            {!config.peakEnabled && (
                                 <div>
                                     <Label className="text-xs">
-                                        {isClub ? 'Off-Peak (pts/slot)' : 'Off-Peak (₹/slot)'}
+                                        {isClub ? 'Rate per slot (pts)' : 'Rate per slot (₹)'}
                                     </Label>
                                     <Input
                                         type="number"
@@ -175,24 +191,48 @@ const PeakSection = ({
                                         onChange={(e) =>
                                             updatePrice(config.sport, 'offPeakPrice', parseFloat(e.target.value) || 0)
                                         }
+                                        disabled={readOnly}
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Charged for every booking, all days and times.
+                                    </p>
                                 </div>
-                                <div>
-                                    <Label className="text-xs">
-                                        {isClub ? 'Peak (pts/slot)' : 'Peak (₹/slot)'}
-                                    </Label>
-                                    <Input
-                                        type="number"
-                                        value={config.peakPrice}
-                                        onChange={(e) =>
-                                            updatePrice(config.sport, 'peakPrice', parseFloat(e.target.value) || 0)
-                                        }
-                                    />
-                                </div>
-                            </div>
+                            )}
 
-                            {/* Conflict banner */}
-                            {sportHasConflicts && (
+                            {/* Peak pricing mode */}
+                            {config.peakEnabled && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs">
+                                            {isClub ? 'Standard rate (pts/slot)' : 'Standard rate (₹/slot)'}
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            value={config.offPeakPrice}
+                                            onChange={(e) =>
+                                                updatePrice(config.sport, 'offPeakPrice', parseFloat(e.target.value) || 0)
+                                            }
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">
+                                            {isClub ? 'Peak rate (pts/slot)' : 'Peak rate (₹/slot)'}
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            value={config.peakPrice}
+                                            onChange={(e) =>
+                                                updatePrice(config.sport, 'peakPrice', parseFloat(e.target.value) || 0)
+                                            }
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Conflict banner + peak windows — only in peak mode */}
+                            {config.peakEnabled && sportHasConflicts && (
                                 <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                                     <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                     <span>
@@ -202,8 +242,8 @@ const PeakSection = ({
                                 </div>
                             )}
 
-                            {/* Peak time windows */}
-                            <div>
+                            {/* Peak time windows — only shown in peak mode */}
+                            {config.peakEnabled && <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <Label className="text-xs font-medium text-muted-foreground">
                                         Peak Time Windows
@@ -347,7 +387,7 @@ const PeakSection = ({
                                         );
                                     })}
                                 </div>
-                            </div>
+                            </div>}
                         </CardContent>
                     </Card>
                 );

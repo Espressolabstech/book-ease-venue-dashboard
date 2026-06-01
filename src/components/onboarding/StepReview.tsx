@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '../../utils/twMerge';
 import { DAYS } from '../../utils/days';
+import { SPORT_EMOJI } from '../../utils/court';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -88,6 +89,25 @@ const StepReview = ({
         const SPORT_MAP: Record<string, string> = {
             Pickleball: 'PICKELBALL',
             Padel: 'PADEL',
+            Tennis: 'TENNIS',
+            Badminton: 'BADMINTON',
+            'Table Tennis': 'TABLE_TENNIS',
+            Squash: 'SQUASH',
+            Football: 'FOOTBALL',
+            Cricket: 'CRICKET',
+            'Box Cricket': 'BOX_CRICKET',
+            Basketball: 'BASKETBALL',
+            Volleyball: 'VOLLEYBALL',
+            Swimming: 'SWIMMING',
+            Hockey: 'HOCKEY',
+            Golf: 'GOLF',
+            Cycling: 'CYCLING',
+            Yoga: 'YOGA',
+            Gym: 'GYM',
+            'Rifle Shooting': 'RIFLE_SHOOTING',
+            Archery: 'ARCHERY',
+            Boxing: 'BOXING',
+            Snooker: 'SNOOKER',
         };
         const SURFACE_MAP: Record<string, string> = {
             'Artificial Grass': 'ARTIFICIAL_GRASS',
@@ -480,7 +500,7 @@ const StepReview = ({
                                     />
                                 ) : (
                                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-lg">
-                                        {c.sport === 'Padel' ? '🏸' : '🏓'}
+                                        {SPORT_EMOJI[c.sport] ?? '🏟️'}
                                     </div>
                                 )}
                                 <div className="flex-1 min-w-0">
@@ -488,14 +508,7 @@ const StepReview = ({
                                         <span className="text-sm font-medium truncate">
                                             {c.name}
                                         </span>
-                                        <span
-                                            className={cn(
-                                                'rounded-full px-2 py-0.5 text-[10px] font-bold',
-                                                c.sport === 'Padel'
-                                                    ? 'bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))]'
-                                                    : 'bg-[hsl(var(--admin-lime))] text-[hsl(var(--admin-lime-foreground))]',
-                                            )}
-                                        >
+                                        <span className="rounded-full bg-[hsl(var(--admin-navy))] text-[hsl(var(--admin-navy-foreground))] px-2 py-0.5 text-[10px] font-bold">
                                             {c.sport}
                                         </span>
                                     </div>
@@ -576,7 +589,7 @@ const StepReview = ({
                                     </p>
                                     <div className="text-xs text-muted-foreground space-y-0.5">
                                         <p>
-                                            Base Rate: ₹{p?.base_rate || 0}/slot
+                                            Base Rate: {isClubWithPoints ? `${p?.base_rate || 0} pts` : `₹${p?.base_rate || 0}`}/slot
                                         </p>
                                         {p?.peak_enabled &&
                                             Array.isArray(p.peak_slots) &&
@@ -586,14 +599,16 @@ const StepReview = ({
                                                     {p.peak_slots
                                                         .map(
                                                             (s: any) =>
-                                                                `₹${s.rate}/slot (${s.start}–${s.end})`,
+                                                                isClubWithPoints
+                                                                    ? `${s.rate} pts/slot (${s.start}–${s.end})`
+                                                                    : `₹${s.rate}/slot (${s.start}–${s.end})`,
                                                         )
                                                         .join(', ')}
                                                 </p>
                                             )}
                                         {p?.weekend_rate_enabled && (
                                             <p>
-                                                Weekend: ₹{p.weekend_rate}/slot
+                                                Weekend: {isClubWithPoints ? `${p.weekend_rate} pts` : `₹${p.weekend_rate}`}/slot
                                                 {p?.weekend_peak_enabled &&
                                                     Array.isArray(
                                                         p.weekend_peak_slots,
@@ -606,7 +621,9 @@ const StepReview = ({
                                                             {p.weekend_peak_slots
                                                                 .map(
                                                                     (s: any) =>
-                                                                        `₹${s.rate}/slot (${s.start}–${s.end})`,
+                                                                        isClubWithPoints
+                                                                            ? `${s.rate} pts/slot (${s.start}–${s.end})`
+                                                                            : `₹${s.rate}/slot (${s.start}–${s.end})`,
                                                                 )
                                                                 .join(', ')}
                                                         </>

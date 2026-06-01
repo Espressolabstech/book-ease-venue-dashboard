@@ -254,7 +254,6 @@ const CourtsSection = ({
                                             )}
                                         </div>
                                         <p className="text-sm text-muted-foreground mt-0.5">
-                                            {court.surfaceMaterial || '—'} ·{' '}
                                             {court.environment}
                                         </p>
                                     </div>

@@ -1,3 +1,5 @@
+import { useQuery } from '@tanstack/react-query';
+import { getPrivateClubConfig } from '../../api/adapters/privateClub';
 import { useCallback, useEffect, useState } from 'react';
 import { WEEKEND_DAYS } from '../../utils/pricing';
 import { weekdays } from '../../utils/settings';
@@ -108,12 +110,14 @@ const PeakSlotRow = ({
     onChange,
     onRemove,
     errorRate,
+    isClubWithPoints = false,
 }: {
     slot: PeakPricingSlot;
     availableDays?: string[];
     onChange: (updates: Partial<PeakPricingSlot>) => void;
     onRemove: () => void;
     errorRate?: string;
+    isClubWithPoints?: boolean;
 }) => (
     <div className="space-y-2 rounded-lg border border-border p-3">
         {/* Time range */}
@@ -150,13 +154,13 @@ const PeakSlotRow = ({
         {/* Rate */}
         <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                ₹
+                {isClubWithPoints ? 'pts' : '₹'}
             </span>
             <Input
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="Peak rate / slot"
+                placeholder={isClubWithPoints ? 'Peak points / slot' : 'Peak rate / slot'}
                 value={slot.rate}
                 onChange={(e) => onChange({ rate: e.target.value })}
                 className={cn(
@@ -176,11 +180,13 @@ const SportPricingPanel = ({
     sportKey,
     errors,
     onChange,
+    isClubWithPoints = false,
 }: {
     pricing: SportPricing;
     sportKey: string;
     errors: Record<string, string>;
     onChange: (updates: Partial<SportPricing>) => void;
+    isClubWithPoints?: boolean;
 }) => {
     const updateSlot = (
         field: 'peak_slots' | 'weekend_peak_slots',
@@ -208,7 +214,7 @@ const SportPricingPanel = ({
                 <Label>Base Rate (per slot) *</Label>
                 <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        ₹
+                        {isClubWithPoints ? 'pts' : '₹'}
                     </span>
                     <Input
                         type="number"
@@ -226,7 +232,7 @@ const SportPricingPanel = ({
                     />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                    Standard off-peak rate per 30-min slot for all{' '}
+                    {isClubWithPoints ? 'Base points per slot for all' : 'Standard off-peak rate per 30-min slot for all'}{' '}
                     {pricing.sport} courts.
                 </p>
                 {errors[`${sportKey}_base`] && (
@@ -275,6 +281,7 @@ const SportPricingPanel = ({
                                 errorRate={
                                     errors[`${sportKey}_peak_${slot.id}`]
                                 }
+                                isClubWithPoints={isClubWithPoints}
                             />
                         ))}
 
@@ -372,10 +379,10 @@ const SportPricingPanel = ({
 
                         {/* Weekend base rate */}
                         <div className="space-y-1.5">
-                            <Label>Weekend Rate (per slot) *</Label>
+                            <Label>{isClubWithPoints ? 'Weekend Points (per slot) *' : 'Weekend Rate (per slot) *'}</Label>
                             <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                    ₹
+                                    {isClubWithPoints ? 'pts' : '₹'}
                                 </span>
                                 <Input
                                     type="number"
@@ -438,6 +445,7 @@ const SportPricingPanel = ({
                                         <PeakSlotRow
                                             key={slot.id}
                                             slot={slot}
+                                            isClubWithPoints={isClubWithPoints}
                                             availableDays={['Sat', 'Sun']}
                                             onChange={(u) =>
                                                 updateSlot(
@@ -518,6 +526,14 @@ const StepPricing = ({
     );
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [loaded, setLoaded] = useState(false);
+
+    const { data: clubConfigData } = useQuery({
+        queryKey: ['private-club-config'],
+        queryFn: getPrivateClubConfig,
+    });
+    const isClubWithPoints =
+        (clubConfigData?.data?.config?.isPrivateClub ?? false) &&
+        (clubConfigData?.data?.config?.pointsEnabled ?? false);
 
     useEffect(() => {
         try {
@@ -749,6 +765,7 @@ const StepPricing = ({
                     sportKey={activeSport}
                     errors={errors}
                     onChange={(updates) => updatePricing(activeSport, updates)}
+                    isClubWithPoints={isClubWithPoints}
                 />
             )}
         </div>

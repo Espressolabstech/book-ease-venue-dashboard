@@ -109,4 +109,5 @@ export const endpoints = {
     privateClubMemberWallet: (memberId: string) => `/private-club/members/${memberId}/wallet`,
     privateClubAdjustPoints: '/private-club/points/adjust',
     privateClubAllocatePoints: '/private-club/points/allocate',
+    privateClubMembersBulk: '/private-club/members/bulk',
 };

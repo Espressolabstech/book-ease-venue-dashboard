@@ -282,7 +282,9 @@ declare global {
             }[];
             pricing?: {
                 pricePerSlot: number;
+                pointsPerSlot?: number;
                 weekendPricePerSlot?: number;
+                weekendPointsPerSlot?: number;
                 weekendDays?: string[];
             };
             peakHourPricings?: {
@@ -290,6 +292,7 @@ declare global {
                 startTime: string;
                 endTime: string;
                 pricePerSlot: number;
+                pointsPerSlot?: number;
                 label?: string;
             }[];
         }[];

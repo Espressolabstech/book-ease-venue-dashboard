@@ -9,6 +9,7 @@ import { cn, formatTime } from '../../utils/twMerge';
 import { getCourts } from '../../api/adapters/courts';
 import { getAvailableSlots, listVenueBookings, cancelBooking } from '../../api/adapters/bookings';
 import { path } from '../../navigation/commanPaths';
+import { SPORT_DISPLAY } from '../../utils/settings';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
@@ -465,7 +466,11 @@ const ListBookings = () => {
                         <div className="space-y-4 pb-8">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="font-semibold text-foreground">{selectedBooking.court?.name}</p>
+                                    <p className="font-semibold text-foreground">
+                                        {selectedBooking.court
+                                            ? `${(SPORT_DISPLAY as Record<string, string>)[selectedBooking.court.sport] ?? selectedBooking.court.sport} · ${selectedBooking.court.name}`
+                                            : '—'}
+                                    </p>
                                     <p className="text-sm text-muted-foreground">{selectedBooking.venue?.name}</p>
                                 </div>
                                 <div className="flex items-center gap-2">
