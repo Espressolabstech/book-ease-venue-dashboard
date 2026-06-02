@@ -738,7 +738,8 @@ const Settings = () => {
             setPricingDialogOpen(true);
             return;
         }
-        await commitCourt(newCourt);
+        // Sport already has pricing — inherit it for the new court automatically
+        await commitCourt({ ...newCourt, pricePerSlot: existingConfig.offPeakPrice });
     };
 
     const confirmPricingAndAddCourt = async () => {

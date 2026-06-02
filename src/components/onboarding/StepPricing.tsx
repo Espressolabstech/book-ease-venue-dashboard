@@ -164,7 +164,7 @@ const PeakSlotRow = ({
                 value={slot.rate}
                 onChange={(e) => onChange({ rate: e.target.value })}
                 className={cn(
-                    'pl-7 h-9 text-sm',
+                    isClubWithPoints ? 'pl-11 h-9 text-sm' : 'pl-7 h-9 text-sm',
                     errorRate && 'border-destructive',
                 )}
             />
@@ -211,22 +211,24 @@ const SportPricingPanel = ({
         <div className="space-y-6">
             {/* ── Base Rate ── */}
             <div className="space-y-1.5">
-                <Label>Base Rate (per slot) *</Label>
+                <Label>{isClubWithPoints ? 'Base Points (per slot) *' : 'Base Rate (per slot) *'}</Label>
                 <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        {isClubWithPoints ? 'pts' : '₹'}
-                    </span>
+                    {!isClubWithPoints && (
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            ₹
+                        </span>
+                    )}
                     <Input
                         type="number"
                         min="0"
                         step="0.01"
-                        placeholder="0.00"
+                        placeholder={isClubWithPoints ? 'e.g. 100' : '0.00'}
                         value={pricing.base_rate}
                         onChange={(e) =>
                             onChange({ base_rate: e.target.value })
                         }
                         className={cn(
-                            'pl-7',
+                            !isClubWithPoints && 'pl-7',
                             errors[`${sportKey}_base`] && 'border-destructive',
                         )}
                     />
@@ -396,7 +398,7 @@ const SportPricingPanel = ({
                                         })
                                     }
                                     className={cn(
-                                        'pl-7',
+                                        isClubWithPoints ? 'pl-11' : 'pl-7',
                                         errors[`${sportKey}_weekend`] &&
                                             'border-destructive',
                                     )}
