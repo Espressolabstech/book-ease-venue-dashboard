@@ -87,7 +87,7 @@ function courtModelToCourtData(c: CourtModel): CourtData {
     return {
         id: c.id,
         name: c.name,
-        sport: c.sport === 'PADEL' ? 'Padel' : 'Pickleball',
+        sport: c.sport === 'PADEL' ? 'Padel' : c.sport === 'TENNIS' ? 'Tennis' : 'Pickleball',
         surfaceMaterial: c.surface,
         lighting:
             c.environment === 'INDOOR' ? 'Indoor Lighting' : 'LED Floodlights',
@@ -198,6 +198,7 @@ const Settings = () => {
             const sportMap: Record<string, string> = {
                 PADEL: 'Padel',
                 PICKELBALL: 'Pickleball',
+                TENNIS: 'Tennis',
             };
 
             // Fetch peak pricings for every court, then group by sport
@@ -266,8 +267,8 @@ const Settings = () => {
                 }
             }
 
-            // Ensure both sports always appear (even if no courts exist yet)
-            const configs: SportPeakConfig[] = ['Padel', 'Pickleball'].map(
+            // Ensure all sports always appear (even if no courts exist yet)
+            const configs: SportPeakConfig[] = ['Padel', 'Pickleball', 'Tennis'].map(
                 (sport) =>
                     bySport[sport] ?? {
                         sport,
@@ -508,12 +509,13 @@ const Settings = () => {
             const apiSportMap: Record<string, string> = {
                 Padel: 'PADEL',
                 Pickleball: 'PICKELBALL',
+                Tennis: 'TENNIS',
             };
             // All courts grouped by display-sport
             const courtsBySportDisplay: Record<string, string[]> = {};
             for (const c of courtsRaw) {
                 const displaySport =
-                    c.sport === 'PADEL' ? 'Padel' : 'Pickleball';
+                    c.sport === 'PADEL' ? 'Padel' : c.sport === 'TENNIS' ? 'Tennis' : 'Pickleball';
                 if (!courtsBySportDisplay[displaySport])
                     courtsBySportDisplay[displaySport] = [];
                 courtsBySportDisplay[displaySport].push(c.id);
@@ -632,7 +634,7 @@ const Settings = () => {
         }
         try {
             const sport: SportType =
-                newCourt.sport === 'Padel' ? 'PADEL' : 'PICKELBALL';
+                newCourt.sport === 'Padel' ? 'PADEL' : newCourt.sport === 'Tennis' ? 'TENNIS' : 'PICKELBALL';
             const environment: CourtEnvironment = newCourt.roofed
                 ? 'INDOOR'
                 : 'OUTDOOR';

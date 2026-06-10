@@ -8,7 +8,7 @@ declare global {
         | 'facility'
         | 'policy';
 
-    type SportType = 'PICKELBALL' | 'PADEL';
+    type SportType = 'PICKELBALL' | 'PADEL' | 'TENNIS';
     type CourtEnvironment = 'INDOOR' | 'OUTDOOR';
     type CourtSurface =
         | 'ARTIFICIAL_GRASS'

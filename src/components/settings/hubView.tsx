@@ -24,6 +24,7 @@ const HubView = ({
 }) => {
     const padelCount = courts.filter((c) => c.sport === 'Padel').length;
     const pickleCount = courts.filter((c) => c.sport === 'Pickleball').length;
+    const tennisCount = courts.filter((c) => c.sport === 'Tennis').length;
     const upcomingDowntimes = downtimes.filter(
         (d) => new Date(d.startDate) >= new Date(),
     );
@@ -83,6 +84,12 @@ const HubView = ({
                         title="Pickleball Courts"
                         subtitle={`${pickleCount} court${pickleCount !== 1 ? 's' : ''}`}
                         onClick={() => onNavigate('courts', 'Pickleball')}
+                    />
+                    <HubCard
+                        icon={<LayoutGrid className="h-5 w-5 text-primary" />}
+                        title="Tennis Courts"
+                        subtitle={`${tennisCount} court${tennisCount !== 1 ? 's' : ''}`}
+                        onClick={() => onNavigate('courts', 'Tennis')}
                     />
                 </div>
             </div>
