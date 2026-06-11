@@ -24,12 +24,12 @@ const ALL_MENU_ITEMS: {
     color: string;
     roles?: VenueStaffRole[];
 }[] = [
-    {
-        icon: CalendarDays,
-        label: 'Bookings',
-        path: path.listBooking,
-        color: 'bg-blue-100 text-blue-600',
-    },
+    // {
+    //     icon: CalendarDays,
+    //     label: 'Bookings',
+    //     path: path.listBooking,
+    //     color: 'bg-blue-100 text-blue-600',
+    // },
     {
         icon: Users,
         label: 'Players',
@@ -38,8 +38,8 @@ const ALL_MENU_ITEMS: {
         roles: ['VENUE_ADMIN', 'VENUE_MANAGER'],
     },
     {
-        icon: Plus,
-        label: 'On-site Booking',
+        icon: CalendarDays,
+        label: 'Bookings',
         path: path.bookings,
         color: 'bg-primary/10 text-primary',
     },
