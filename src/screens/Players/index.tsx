@@ -304,7 +304,7 @@ const Players = () => {
                                 {parseFloat(player.totalSpend).toLocaleString()}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                                Avg ₹{player.avgSpend} / session
+                                Avg ₹{parseFloat(player.avgSpend).toFixed(2)} / session
                             </p>
                         </div>
                         <div className="rounded-xl border bg-card p-4">
@@ -863,7 +863,7 @@ const Players = () => {
                                                     ).toLocaleString()}
                                                 </p>
                                                 <p className="text-[11px] text-muted-foreground">
-                                                    avg ₹{player.avgSpend}
+                                                    avg ₹{parseFloat(player.avgSpend).toFixed(2)}
                                                 </p>
                                             </div>
                                             <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />

@@ -1,4 +1,4 @@
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, LogOut, Save } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { canEdit, useVenueRole } from '../../hooks/useVenueRole';
@@ -65,6 +65,7 @@ import {
     getBookingPolicy,
     updateBookingPolicy,
 } from '../../api/adapters/bookingPolicy';
+import { removeToken } from '../../utils/cookies.helpers';
 import { SPORT_DISPLAY, SPORT_API } from '../../utils/settings';
 import { API_TO_SURFACE, SURFACE_TO_API, envFromApi, envToApi, getSurfaceOptions } from '../../utils/sportFields';
 import type { EnvironmentOption } from '../../utils/sportFields';
@@ -737,22 +738,34 @@ const Settings = () => {
 
             <main className="mx-auto max-w-lg px-4 pt-4">
                 {section === 'hub' && (
-                    <HubView
-                        courts={courts}
-                        downtimes={downtimes}
-                        peakConfigs={peakConfigs}
-                        facility={facility}
-                        onNavigate={(s, sport) => {
-                            setSection(s);
-                            if (sport === '') {
-                                setActiveSport('');
-                                setShowAddForm(false);
-                            } else if (sport) {
-                                setActiveSport(sport);
-                                setNewCourt((p) => ({ ...p, sport }));
-                            }
-                        }}
-                    />
+                    <>
+                        <HubView
+                            courts={courts}
+                            downtimes={downtimes}
+                            peakConfigs={peakConfigs}
+                            facility={facility}
+                            onNavigate={(s, sport) => {
+                                setSection(s);
+                                if (sport === '') {
+                                    setActiveSport('');
+                                    setShowAddForm(false);
+                                } else if (sport) {
+                                    setActiveSport(sport);
+                                    setNewCourt((p) => ({ ...p, sport }));
+                                }
+                            }}
+                        />
+                        <button
+                            onClick={() => {
+                                removeToken();
+                                navigate(path.login);
+                            }}
+                            className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl border border-destructive/30 py-3 text-sm font-medium text-destructive hover:bg-destructive/5 transition-colors"
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Log Out
+                        </button>
+                    </>
                 )}
                 {section === 'hours' && (
                     <HoursSection
