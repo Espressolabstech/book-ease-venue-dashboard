@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import config from '../../config/config';
-import { getToken, removeToken } from '../../utils/cookies.helpers';
+import { getToken } from '../../utils/cookies.helpers';
 
 const apiClient = async <T = unknown>(
     options: AxiosRequestConfig,
@@ -30,9 +30,6 @@ const apiClient = async <T = unknown>(
             // window.location.href = '/login';
         }
 
-        if (error instanceof Error && error.message === 'Network Error') {
-            window.location.href = '/500';
-        }
 
         const errorObj: ApiError = {
             status: axios.isAxiosError(error)

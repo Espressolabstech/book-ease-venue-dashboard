@@ -338,20 +338,31 @@ const Booking = () => {
         }
     };
 
-    const selectedBookedBooking = useMemo(() => {
-        if (!selectedBookedSlot) return null;
-        return venueBookings.find(
-            (b) =>
-                b.courtId === selectedBookedSlot.courtId &&
-                b.startTime === selectedBookedSlot.startTime &&
-                b.status !== 'CANCELLED',
-        ) ?? null;
-    }, [selectedBookedSlot, venueBookings]);
+    const hhmm = (t: string) => t.slice(0, 5);
+
+    const getBookingInRange = (courtId: string, slotStartTime: string) => {
+        const slot = hhmm(slotStartTime);
+        return (
+            venueBookings.find(
+                (b) =>
+                    b.courtId === courtId &&
+                    hhmm(b.startTime) <= slot &&
+                    slot < hhmm(b.endTime) &&
+                    b.status !== 'CANCELLED',
+            ) ?? null
+        );
+    };
+
+    const selectedBookedBooking = useMemo(
+        () =>
+            selectedBookedSlot
+                ? getBookingInRange(selectedBookedSlot.courtId, selectedBookedSlot.startTime)
+                : null,
+        [selectedBookedSlot, venueBookings],
+    );
 
     const getPlayerNameForSlot = (courtId: string, startTime: string): string | null => {
-        const booking = venueBookings.find(
-            (b) => b.courtId === courtId && b.startTime === startTime && b.status !== 'CANCELLED',
-        );
+        const booking = getBookingInRange(courtId, startTime);
         return booking?.user?.name ?? booking?.user?.phone ?? null;
     };
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { AlertTriangle, ArrowLeft, Calendar, Clock, CreditCard, Lock, Loader2, Plus, User, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calendar, Clock, CreditCard, Loader2, Plus, User, XCircle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { DateStrip } from '../../components/DateStrip';
@@ -64,16 +64,30 @@ const ListBookings = () => {
     });
     const venueBookings: BookingModel[] = venueBookingsData?.data?.bookings ?? [];
 
-    // Find the booking matching the clicked slot
-    const selectedBooking = useMemo(() => {
-        if (!selectedSlot) return null;
-        return venueBookings.find(
-            (b) =>
-                b.courtId === selectedSlot.courtId &&
-                b.startTime === selectedSlot.startTime &&
-                b.status !== 'CANCELLED',
-        ) ?? null;
-    }, [selectedSlot, venueBookings]);
+    // Normalize to "HH:MM" so "07:00:00" and "07:00" compare equal
+    const hhmm = (t: string) => t.slice(0, 5);
+
+    // Find the booking whose time range contains the given slot time
+    const getBookingForSlotTime = (courtId: string, slotStartTime: string) => {
+        const slot = hhmm(slotStartTime);
+        return (
+            venueBookings.find(
+                (b) =>
+                    b.courtId === courtId &&
+                    hhmm(b.startTime) <= slot &&
+                    slot < hhmm(b.endTime) &&
+                    b.status !== 'CANCELLED',
+            ) ?? null
+        );
+    };
+
+    const selectedBooking = useMemo(
+        () =>
+            selectedSlot
+                ? getBookingForSlotTime(selectedSlot.courtId, selectedSlot.startTime)
+                : null,
+        [selectedSlot, venueBookings],
+    );
 
     const { mutate: doCancel, isPending: cancelLoading } = useMutation({
         mutationFn: (bookingId: string) =>
@@ -344,30 +358,32 @@ const ListBookings = () => {
                                         </div>
                                         {allCourtsSlots.map(({ court, slots: courtSlots }) => {
                                             const slot = courtSlots[rowIdx];
-                                            const color = slot
-                                                ? getSlotColor(slot.status)
-                                                : 'bg-muted';
+                                            const color = slot ? getSlotColor(slot.status) : 'bg-muted';
+                                            const isClickable = slot?.status === 'booked' || slot?.status === 'pending';
+                                            const playerName = isClickable
+                                                ? (getBookingForSlotTime(court.id, slot!.startTime)?.user?.name ?? null)
+                                                : null;
                                             return (
                                                 <button
                                                     key={`${court.id}-${time}`}
                                                     onClick={() => {
-                                                        if (slot?.status === 'available') {
-                                                            navigate(
-                                                                `${path.bookings}?court=${court.id}&slot=${slot.id}&date=${dateStr}`,
-                                                            );
-                                                        } else if (slot?.status === 'booked' || slot?.status === 'pending') {
-                                                            setSelectedSlot({ courtId: court.id, startTime: slot.startTime });
-                                                        } else {
-                                                            setSelectedCourt(court.id);
+                                                        if (isClickable) {
+                                                            setSelectedSlot({ courtId: court.id, startTime: slot!.startTime });
                                                         }
                                                     }}
                                                     className={cn(
-                                                        'h-7 w-full transition-opacity',
+                                                        'h-7 w-full overflow-hidden px-0.5',
                                                         color,
-                                                        (slot?.status === 'available' || slot?.status === 'booked' || slot?.status === 'pending') && 'hover:opacity-75',
-                                                        !slot && 'cursor-default',
+                                                        isClickable && 'hover:opacity-75 transition-opacity',
+                                                        !isClickable && 'cursor-default',
                                                     )}
-                                                />
+                                                >
+                                                    {playerName && (
+                                                        <span className="block truncate text-[9px] font-semibold leading-none text-white/90">
+                                                            {playerName.split(' ')[0]}
+                                                        </span>
+                                                    )}
+                                                </button>
                                             );
                                         })}
                                     </>
@@ -391,26 +407,23 @@ const ListBookings = () => {
                                 const isBooked = slot.status === 'booked';
                                 const isPending = slot.status === 'pending';
                                 const isAvailable = slot.status === 'available';
+                                const booking = (isBooked || isPending)
+                                    ? getBookingForSlotTime(slot.courtId, slot.startTime)
+                                    : null;
+                                const playerName = booking?.user?.name ?? booking?.user?.phone ?? null;
 
                                 return (
                                     <div
                                         key={slot.id}
                                         className={cn(
                                             'flex items-center gap-3 rounded-lg border p-3 transition-colors',
-                                            isAvailable &&
-                                                'bg-card border-border cursor-pointer hover:bg-success/5 hover:border-success/30',
-                                            isBooked &&
-                                                'bg-destructive/5 border-destructive/20 cursor-pointer hover:bg-destructive/10',
-                                            isPending &&
-                                                'bg-warning/5 border-warning/20 cursor-pointer hover:bg-warning/10',
+                                            isAvailable && 'bg-card border-border',
+                                            isBooked && 'bg-destructive/5 border-destructive/20 cursor-pointer hover:bg-destructive/10',
+                                            isPending && 'bg-warning/5 border-warning/20 cursor-pointer hover:bg-warning/10',
                                         )}
                                         onClick={() => {
-                                            if (isAvailable) {
-                                                navigate(
-                                                    `${path.bookings}?court=${selectedCourt}&slot=${slot.id}&date=${dateStr}`,
-                                                );
-                                            } else if (isBooked || isPending) {
-                                                setSelectedSlot({ courtId: selectedCourt, startTime: slot.startTime });
+                                            if (isBooked || isPending) {
+                                                setSelectedSlot({ courtId: slot.courtId, startTime: slot.startTime });
                                             }
                                         }}
                                     >
@@ -428,22 +441,20 @@ const ListBookings = () => {
                                         <div className="flex-1 min-w-0">
                                             {isBooked ? (
                                                 <div className="flex items-center gap-1.5">
-                                                    <Lock className="h-3.5 w-3.5 text-destructive" />
-                                                    <p className="text-sm font-medium text-destructive">
-                                                        Booked
+                                                    <User className="h-3.5 w-3.5 text-destructive shrink-0" />
+                                                    <p className="truncate text-sm font-medium text-destructive">
+                                                        {playerName ?? 'Booked'}
                                                     </p>
                                                 </div>
                                             ) : isPending ? (
                                                 <div className="flex items-center gap-1.5">
-                                                    <Lock className="h-3.5 w-3.5 text-warning" />
-                                                    <p className="text-sm font-medium text-warning">
-                                                        Pending payment
+                                                    <User className="h-3.5 w-3.5 text-warning shrink-0" />
+                                                    <p className="truncate text-sm font-medium text-warning">
+                                                        {playerName ?? 'Pending payment'}
                                                     </p>
                                                 </div>
                                             ) : (
-                                                <p className="text-sm text-muted-foreground">
-                                                    Open · tap to book
-                                                </p>
+                                                <p className="text-sm text-muted-foreground">Open</p>
                                             )}
                                         </div>
                                     </div>

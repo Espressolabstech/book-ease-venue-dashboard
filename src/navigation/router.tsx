@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import {
     AuthWrapper,
     DashboardWrapper,
@@ -14,6 +14,7 @@ import VenueInvite from '../screens/VenueInvite';
 import Settings from '../screens/Settings';
 import Bookings from '../screens/Bookings';
 import ListBookings from '../screens/Bookings/ListBookings';
+import ViewBooking from '../screens/Bookings/ViewBookings';
 import Players from '../screens/Players';
 import Analytics from '../screens/Analytics';
 import Wallets from '../screens/Wallets';
@@ -51,6 +52,10 @@ export const router = createBrowserRouter([
         element: <ProtectedComponentWrapper children={<ListBookings />} />,
     },
     {
+        path: '/manager/booking/:id',
+        element: <ProtectedComponentWrapper children={<ViewBooking />} />,
+    },
+    {
         path: path.players,
         element: (
             <VenueAdminOrManagerWrapper children={<Players />} />
@@ -69,5 +74,9 @@ export const router = createBrowserRouter([
     {
         path: path.staff,
         element: <VenueAdminOnlyWrapper children={<Staff />} />,
+    },
+    {
+        path: '*',
+        element: <Navigate to={path.dashboard} replace />,
     },
 ]);

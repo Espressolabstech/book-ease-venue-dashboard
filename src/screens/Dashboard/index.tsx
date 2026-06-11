@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
     BarChart3,
+    CalendarDays,
     Loader2,
     Plus,
     Settings,
@@ -12,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../components/ui/card';
 import { path } from '../../navigation/commanPaths';
 import { listVenueBookings } from '../../api/adapters/bookings';
+import { getOnBoardedVenueDetails } from '../../api/adapters/onBoard';
 import { cn, formatTime } from '../../utils/twMerge';
 import { useVenueRole } from '../../hooks/useVenueRole';
 
@@ -22,6 +24,12 @@ const ALL_MENU_ITEMS: {
     color: string;
     roles?: VenueStaffRole[];
 }[] = [
+    {
+        icon: CalendarDays,
+        label: 'Bookings',
+        path: path.listBooking,
+        color: 'bg-blue-100 text-blue-600',
+    },
     {
         icon: Users,
         label: 'Players',
@@ -87,9 +95,19 @@ const Dashboard = () => {
     const menuItems = ALL_MENU_ITEMS.filter(
         (item) => !item.roles || item.roles.includes(role),
     );
+
+    const [venueName, setVenueName] = useState('');
     const [bookings, setBookings] = useState<BookingModel[]>([]);
     const [total, setTotal] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
+
+    const occupancy = total !== null ? Math.round((total / 15) * 100) : null;
+
+    useEffect(() => {
+        getOnBoardedVenueDetails()
+            .then((res) => setVenueName(res.data.venue.name))
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -105,13 +123,11 @@ const Dashboard = () => {
             .finally(() => setLoading(false));
     }, []);
 
-    const occupancy = total !== null ? Math.round((total / 15) * 100) : null;
-
     return (
         <div className="min-h-screen bg-background">
             <header className="bg-primary px-4 pb-6 pt-10 text-primary-foreground">
                 <h1 className="text-xl font-bold">Manager Dashboard</h1>
-                <p className="text-sm opacity-80">Padel Arena Dubai</p>
+                <p className="text-sm opacity-80">{venueName || ' '}</p>
             </header>
 
             <main className="mx-auto max-w-lg px-4 -mt-4">
