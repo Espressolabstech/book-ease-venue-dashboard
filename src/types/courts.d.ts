@@ -8,7 +8,28 @@ declare global {
         | 'facility'
         | 'policy';
 
-    type SportType = 'PICKELBALL' | 'PADEL' | 'TENNIS';
+    type SportType =
+        | 'PICKELBALL'
+        | 'PADEL'
+        | 'TENNIS'
+        | 'BADMINTON'
+        | 'TABLE_TENNIS'
+        | 'SQUASH'
+        | 'FOOTBALL'
+        | 'CRICKET'
+        | 'BOX_CRICKET'
+        | 'BASKETBALL'
+        | 'VOLLEYBALL'
+        | 'SWIMMING'
+        | 'HOCKEY'
+        | 'GOLF'
+        | 'CYCLING'
+        | 'YOGA'
+        | 'GYM'
+        | 'RIFLE_SHOOTING'
+        | 'ARCHERY'
+        | 'BOXING'
+        | 'SNOOKER';
     type CourtEnvironment = 'INDOOR' | 'OUTDOOR';
     type CourtSurface =
         | 'ARTIFICIAL_GRASS'
@@ -32,15 +53,18 @@ declare global {
         court?: { id: string; name: string; sport: string };
     }
 
+    type EnvironmentOption = 'Indoor' | 'Covered Outdoor' | 'Outdoor';
+
     interface CourtData {
         id: string;
         name: string;
         sport: string;
+        environment: EnvironmentOption;
         surfaceMaterial: string;
-        lighting: string;
-        roofed: boolean;
         isActive: boolean;
         pricePerSlot: number;
+        format?: string;
+        courtSize?: string;
     }
 
     interface OperatingHours {
@@ -60,6 +84,7 @@ declare global {
 
     interface SportPeakConfig {
         sport: string;
+        peakEnabled: boolean;
         peakPrice: number;
         offPeakPrice: number;
         slots: PeakHourSlot[];

@@ -12,7 +12,6 @@ import { Card, CardContent } from '../ui/card';
 const HubView = ({
     courts,
     downtimes,
-    peakConfigs,
     facility,
     onNavigate,
 }: {
@@ -22,52 +21,24 @@ const HubView = ({
     facility: FacilityInfo;
     onNavigate: (section: Section, sport?: string) => void;
 }) => {
-    const padelCount = courts.filter((c) => c.sport === 'Padel').length;
-    const pickleCount = courts.filter((c) => c.sport === 'Pickleball').length;
-    const tennisCount = courts.filter((c) => c.sport === 'Tennis').length;
     const upcomingDowntimes = downtimes.filter(
         (d) => new Date(d.startDate) >= new Date(),
     );
 
+    const sportGroups: Record<string, number> = {};
+    for (const c of courts) {
+        sportGroups[c.sport] = (sportGroups[c.sport] ?? 0) + 1;
+    }
+    const courtSubtitle =
+        courts.length === 0
+            ? 'No courts yet'
+            : Object.entries(sportGroups)
+                  .map(([sport, count]) => `${count} ${sport}`)
+                  .join(' · ');
+
     return (
         <div className="space-y-5">
-            {/* ── Timing ── */}
-            <div>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                    Timing
-                </p>
-                <div className="space-y-2">
-                    <HubCard
-                        icon={<Clock className="h-5 w-5 text-primary" />}
-                        title="Operating Hours"
-                        subtitle="Facility open & close times"
-                        onClick={() => onNavigate('hours')}
-                    />
-                    <HubCard
-                        icon={<Zap className="h-5 w-5 text-primary" />}
-                        title="Peak Hours & Pricing"
-                        subtitle={peakConfigs
-                            .map(
-                                (c) =>
-                                    `${c.sport}: ₹${c.offPeakPrice}–₹${c.peakPrice}/slot`,
-                            )
-                            .join(' · ')}
-                        onClick={() => onNavigate('peak')}
-                    />
-                    <HubCard
-                        icon={<CalendarOff className="h-5 w-5 text-primary" />}
-                        title="Scheduled Downtime"
-                        subtitle={
-                            upcomingDowntimes.length > 0
-                                ? `${upcomingDowntimes.length} upcoming maintenance`
-                                : 'No upcoming maintenance'
-                        }
-                        onClick={() => onNavigate('downtime')}
-                    />
-                </div>
-            </div>
-
-            {/* ── Sports ── */}
+            {/* ── Courts ── */}
             <div>
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
                     Courts
@@ -75,21 +46,24 @@ const HubView = ({
                 <div className="space-y-2">
                     <HubCard
                         icon={<LayoutGrid className="h-5 w-5 text-primary" />}
-                        title="Padel Courts"
-                        subtitle={`${padelCount} court${padelCount !== 1 ? 's' : ''}`}
-                        onClick={() => onNavigate('courts', 'Padel')}
+                        title="Manage Courts"
+                        subtitle={courtSubtitle}
+                        onClick={() => onNavigate('courts', '')}
                     />
+                </div>
+            </div>
+
+            {/* ── Pricing ── */}
+            <div>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
+                    Pricing
+                </p>
+                <div className="space-y-2">
                     <HubCard
-                        icon={<LayoutGrid className="h-5 w-5 text-primary" />}
-                        title="Pickleball Courts"
-                        subtitle={`${pickleCount} court${pickleCount !== 1 ? 's' : ''}`}
-                        onClick={() => onNavigate('courts', 'Pickleball')}
-                    />
-                    <HubCard
-                        icon={<LayoutGrid className="h-5 w-5 text-primary" />}
-                        title="Tennis Courts"
-                        subtitle={`${tennisCount} court${tennisCount !== 1 ? 's' : ''}`}
-                        onClick={() => onNavigate('courts', 'Tennis')}
+                        icon={<Zap className="h-5 w-5 text-primary" />}
+                        title="Pricing & Peak Hours"
+                        subtitle="Set rates and peak hour windows per sport"
+                        onClick={() => onNavigate('peak')}
                     />
                 </div>
             </div>
@@ -105,6 +79,22 @@ const HubView = ({
                         title="Facility Info"
                         subtitle={`${facility.amenities.length} amenities · Bio ${facility.bio ? 'set' : 'empty'}`}
                         onClick={() => onNavigate('facility')}
+                    />
+                    <HubCard
+                        icon={<Clock className="h-5 w-5 text-primary" />}
+                        title="Operating Hours"
+                        subtitle="Facility open & close times"
+                        onClick={() => onNavigate('hours')}
+                    />
+                    <HubCard
+                        icon={<CalendarOff className="h-5 w-5 text-primary" />}
+                        title="Scheduled Downtime"
+                        subtitle={
+                            upcomingDowntimes.length > 0
+                                ? `${upcomingDowntimes.length} upcoming maintenance`
+                                : 'No upcoming maintenance'
+                        }
+                        onClick={() => onNavigate('downtime')}
                     />
                     <HubCard
                         icon={<ShieldCheck className="h-5 w-5 text-primary" />}

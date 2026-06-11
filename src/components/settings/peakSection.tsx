@@ -1,11 +1,10 @@
 import { AlertTriangle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { weekdays } from '../../utils/settings';
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function toMinutes(t: string): number {
     const [h, m] = t.split(':').map(Number);
@@ -14,11 +13,6 @@ function toMinutes(t: string): number {
 
 const isTempId = (id: string) => /^p\d+$/.test(id);
 
-/**
- * Group slots by time window.
- * - Persisted slots (real DB IDs) with the same start/end are one visual window.
- * - Temp (unsaved) slots always get their own window so they're never merged.
- */
 function groupSlotsByTime(slots: PeakHourSlot[]): PeakHourSlot[][] {
     const map = new Map<string, PeakHourSlot[]>();
     for (const slot of slots) {
@@ -36,7 +30,6 @@ interface GroupMeta {
     activeDays: Set<string>;
 }
 
-/** Returns the set of group keys that overlap with at least one other group. */
 function findConflictingKeys(groups: GroupMeta[]): Set<string> {
     const out = new Set<string>();
     for (let i = 0; i < groups.length; i++) {
@@ -44,16 +37,9 @@ function findConflictingKeys(groups: GroupMeta[]): Set<string> {
             const a = groups[i];
             const b = groups[j];
             if (!a.startTime || !a.endTime || !b.startTime || !b.endTime) continue;
-
-            // A window with no days selected is incomplete — skip it from
-            // conflict detection (it will be caught by the no-days validator).
             if (a.activeDays.size === 0 || b.activeDays.size === 0) continue;
-
-            // Day overlap
             const sharedDay = [...a.activeDays].some((d) => b.activeDays.has(d));
             if (!sharedDay) continue;
-
-            // Time overlap
             const aS = toMinutes(a.startTime);
             const aE = toMinutes(a.endTime);
             const bS = toMinutes(b.startTime);
@@ -67,8 +53,6 @@ function findConflictingKeys(groups: GroupMeta[]): Set<string> {
     return out;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
 const PeakSection = ({
     peakConfigs,
     addSlot,
@@ -76,6 +60,7 @@ const PeakSection = ({
     removeSlot,
     toggleDay,
     updatePrice,
+    togglePeakEnabled,
     onSave,
     saving,
     readOnly = false,
@@ -86,11 +71,11 @@ const PeakSection = ({
     removeSlot: (sport: string, slotId: string) => void;
     toggleDay: (sport: string, slotId: string, day: string) => void;
     updatePrice: (sport: string, field: 'peakPrice' | 'offPeakPrice', value: number) => void;
+    togglePeakEnabled: (sport: string) => void;
     onSave: () => void;
     saving?: boolean;
     readOnly?: boolean;
 }) => {
-    // Compute all conflicts across all sport configs
     const allConflictKeys = new Set<string>();
     const sportConflictKeys: Record<string, Set<string>> = {};
 
@@ -109,7 +94,6 @@ const PeakSection = ({
         keys.forEach((k) => allConflictKeys.add(k));
     }
 
-    // Flag windows where start >= end
     const invalidTimeKeys = new Set<string>();
     for (const config of peakConfigs) {
         for (const group of groupSlotsByTime(config.slots)) {
@@ -121,7 +105,6 @@ const PeakSection = ({
         }
     }
 
-    // Flag windows where no days are selected (incomplete, can't save)
     const noDaysKeys = new Set<string>();
     for (const config of peakConfigs) {
         for (const group of groupSlotsByTime(config.slots)) {
@@ -157,36 +140,67 @@ const PeakSection = ({
                 return (
                     <Card key={config.sport}>
                         <CardContent className="p-4 space-y-4">
-                            <h3 className="font-semibold text-foreground text-lg">
-                                {config.sport}
-                            </h3>
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-semibold text-foreground text-lg">
+                                    {config.sport}
+                                </h3>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-muted-foreground">
+                                        {config.peakEnabled ? 'Peak pricing on' : 'Single rate'}
+                                    </span>
+                                    <Switch
+                                        checked={config.peakEnabled}
+                                        onCheckedChange={() => !readOnly && togglePeakEnabled(config.sport)}
+                                        disabled={readOnly}
+                                    />
+                                </div>
+                            </div>
 
-                            {/* Pricing */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {!config.peakEnabled && (
                                 <div>
-                                    <Label className="text-xs">Off-Peak (₹/slot)</Label>
+                                    <Label className="text-xs">Rate per slot (₹)</Label>
                                     <Input
                                         type="number"
                                         value={config.offPeakPrice}
                                         onChange={(e) =>
                                             updatePrice(config.sport, 'offPeakPrice', parseFloat(e.target.value) || 0)
                                         }
+                                        disabled={readOnly}
                                     />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Charged for every booking, all days and times.
+                                    </p>
                                 </div>
-                                <div>
-                                    <Label className="text-xs">Peak (₹/slot)</Label>
-                                    <Input
-                                        type="number"
-                                        value={config.peakPrice}
-                                        onChange={(e) =>
-                                            updatePrice(config.sport, 'peakPrice', parseFloat(e.target.value) || 0)
-                                        }
-                                    />
-                                </div>
-                            </div>
+                            )}
 
-                            {/* Conflict banner */}
-                            {sportHasConflicts && (
+                            {config.peakEnabled && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs">Standard rate (₹/slot)</Label>
+                                        <Input
+                                            type="number"
+                                            value={config.offPeakPrice}
+                                            onChange={(e) =>
+                                                updatePrice(config.sport, 'offPeakPrice', parseFloat(e.target.value) || 0)
+                                            }
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">Peak rate (₹/slot)</Label>
+                                        <Input
+                                            type="number"
+                                            value={config.peakPrice}
+                                            onChange={(e) =>
+                                                updatePrice(config.sport, 'peakPrice', parseFloat(e.target.value) || 0)
+                                            }
+                                            disabled={readOnly}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {config.peakEnabled && sportHasConflicts && (
                                 <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                                     <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                     <span>
@@ -196,152 +210,150 @@ const PeakSection = ({
                                 </div>
                             )}
 
-                            {/* Peak time windows */}
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <Label className="text-xs font-medium text-muted-foreground">
-                                        Peak Time Windows
-                                    </Label>
-                                    {!readOnly && (
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => addSlot(config.sport)}
-                                            className="h-7 text-xs"
-                                        >
-                                            <Plus className="mr-1 h-3 w-3" /> Add Window
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {config.slots.length === 0 && (
-                                    <p className="text-sm text-muted-foreground py-2 text-center">
-                                        No peak windows — all hours use off-peak rate.
-                                    </p>
-                                )}
-
-                                <div className="space-y-2">
-                                    {groups.map((group) => {
-                                        const rep = group[0];
-                                        const activeDays = new Set(group.flatMap((s) => s.days));
-                                        const groupKey = isTempId(rep.id)
-                                            ? rep.id
-                                            : `${rep.startTime}-${rep.endTime}`;
-                                        const isConflict = conflictKeys.has(groupKey);
-                                        const isInvalidTime =
-                                            rep.startTime &&
-                                            rep.endTime &&
-                                            toMinutes(rep.startTime) >= toMinutes(rep.endTime);
-                                        const isNoDays = noDaysKeys.has(groupKey);
-
-                                        return (
-                                            <div
-                                                key={groupKey}
-                                                className={`space-y-2 rounded-lg border p-3 ${
-                                                    isConflict || isInvalidTime || isNoDays
-                                                        ? 'border-destructive/60 bg-destructive/5'
-                                                        : 'border-border'
-                                                }`}
+                            {config.peakEnabled && (
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <Label className="text-xs font-medium text-muted-foreground">
+                                            Peak Time Windows
+                                        </Label>
+                                        {!readOnly && (
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => addSlot(config.sport)}
+                                                className="h-7 text-xs"
                                             >
-                                                {/* Error labels */}
-                                                {isInvalidTime && (
-                                                    <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        End time must be after start time
-                                                    </p>
-                                                )}
-                                                {isConflict && !isInvalidTime && (
-                                                    <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        Overlaps with another window on a shared day
-                                                    </p>
-                                                )}
-                                                {isNoDays && !isInvalidTime && !isConflict && (
-                                                    <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
-                                                        <AlertTriangle className="h-3 w-3" />
-                                                        Select at least one day
-                                                    </p>
-                                                )}
+                                                <Plus className="mr-1 h-3 w-3" /> Add Window
+                                            </Button>
+                                        )}
+                                    </div>
 
-                                                {/* Time inputs + delete */}
-                                                <div className="flex items-center gap-2">
-                                                    <div className="flex flex-1 items-center gap-1.5">
-                                                        <Input
-                                                            type="time"
-                                                            value={rep.startTime}
-                                                            onChange={(e) =>
-                                                                group.forEach((s) =>
-                                                                    updateSlot(config.sport, s.id, {
-                                                                        startTime: e.target.value,
-                                                                    })
-                                                                )
-                                                            }
-                                                            className="h-8 text-xs"
-                                                        />
-                                                        <span className="text-xs text-muted-foreground shrink-0">
-                                                            to
-                                                        </span>
-                                                        <Input
-                                                            type="time"
-                                                            value={rep.endTime}
-                                                            onChange={(e) =>
-                                                                group.forEach((s) =>
-                                                                    updateSlot(config.sport, s.id, {
-                                                                        endTime: e.target.value,
-                                                                    })
-                                                                )
-                                                            }
-                                                            className="h-8 text-xs"
-                                                        />
-                                                    </div>
-                                                    {!readOnly && (
-                                                        <button
-                                                            onClick={() =>
-                                                                group.forEach((s) =>
-                                                                    removeSlot(config.sport, s.id)
-                                                                )
-                                                            }
-                                                            className="rounded p-1.5 hover:bg-destructive/10"
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                                        </button>
+                                    {config.slots.length === 0 && (
+                                        <p className="text-sm text-muted-foreground py-2 text-center">
+                                            No peak windows — all hours use off-peak rate.
+                                        </p>
+                                    )}
+
+                                    <div className="space-y-2">
+                                        {groups.map((group) => {
+                                            const rep = group[0];
+                                            const activeDays = new Set(group.flatMap((s) => s.days));
+                                            const groupKey = isTempId(rep.id)
+                                                ? rep.id
+                                                : `${rep.startTime}-${rep.endTime}`;
+                                            const isConflict = conflictKeys.has(groupKey);
+                                            const isInvalidTime =
+                                                rep.startTime &&
+                                                rep.endTime &&
+                                                toMinutes(rep.startTime) >= toMinutes(rep.endTime);
+                                            const isNoDays = noDaysKeys.has(groupKey);
+
+                                            return (
+                                                <div
+                                                    key={groupKey}
+                                                    className={`space-y-2 rounded-lg border p-3 ${
+                                                        isConflict || isInvalidTime || isNoDays
+                                                            ? 'border-destructive/60 bg-destructive/5'
+                                                            : 'border-border'
+                                                    }`}
+                                                >
+                                                    {isInvalidTime && (
+                                                        <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            End time must be after start time
+                                                        </p>
                                                     )}
-                                                </div>
+                                                    {isConflict && !isInvalidTime && (
+                                                        <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            Overlaps with another window on a shared day
+                                                        </p>
+                                                    )}
+                                                    {isNoDays && !isInvalidTime && !isConflict && (
+                                                        <p className="flex items-center gap-1 text-[11px] text-destructive font-medium">
+                                                            <AlertTriangle className="h-3 w-3" />
+                                                            Select at least one day
+                                                        </p>
+                                                    )}
 
-                                                {/* Day toggles */}
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {weekdays.map((day) => {
-                                                        const isActive = activeDays.has(day);
-                                                        return (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="flex flex-1 items-center gap-1.5">
+                                                            <Input
+                                                                type="time"
+                                                                value={rep.startTime}
+                                                                onChange={(e) =>
+                                                                    group.forEach((s) =>
+                                                                        updateSlot(config.sport, s.id, {
+                                                                            startTime: e.target.value,
+                                                                        })
+                                                                    )
+                                                                }
+                                                                className="h-8 text-xs"
+                                                            />
+                                                            <span className="text-xs text-muted-foreground shrink-0">
+                                                                to
+                                                            </span>
+                                                            <Input
+                                                                type="time"
+                                                                value={rep.endTime}
+                                                                onChange={(e) =>
+                                                                    group.forEach((s) =>
+                                                                        updateSlot(config.sport, s.id, {
+                                                                            endTime: e.target.value,
+                                                                        })
+                                                                    )
+                                                                }
+                                                                className="h-8 text-xs"
+                                                            />
+                                                        </div>
+                                                        {!readOnly && (
                                                             <button
-                                                                key={day}
-                                                                onClick={() => {
-                                                                    if (isActive) {
-                                                                        const owner = group.find((s) =>
-                                                                            s.days.includes(day),
-                                                                        );
-                                                                        if (owner)
-                                                                            toggleDay(config.sport, owner.id, day);
-                                                                    } else {
-                                                                        toggleDay(config.sport, rep.id, day);
-                                                                    }
-                                                                }}
-                                                                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                                                                    isActive
-                                                                        ? 'bg-primary text-primary-foreground'
-                                                                        : 'bg-muted text-muted-foreground hover:bg-accent'
-                                                                }`}
+                                                                onClick={() =>
+                                                                    group.forEach((s) =>
+                                                                        removeSlot(config.sport, s.id)
+                                                                    )
+                                                                }
+                                                                className="rounded p-1.5 hover:bg-destructive/10"
                                                             >
-                                                                {day}
+                                                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                                             </button>
-                                                        );
-                                                    })}
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {weekdays.map((day) => {
+                                                            const isActive = activeDays.has(day);
+                                                            return (
+                                                                <button
+                                                                    key={day}
+                                                                    onClick={() => {
+                                                                        if (isActive) {
+                                                                            const owner = group.find((s) =>
+                                                                                s.days.includes(day),
+                                                                            );
+                                                                            if (owner)
+                                                                                toggleDay(config.sport, owner.id, day);
+                                                                        } else {
+                                                                            toggleDay(config.sport, rep.id, day);
+                                                                        }
+                                                                    }}
+                                                                    className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                                                        isActive
+                                                                            ? 'bg-primary text-primary-foreground'
+                                                                            : 'bg-muted text-muted-foreground hover:bg-accent'
+                                                                    }`}
+                                                                >
+                                                                    {day}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </CardContent>
                     </Card>
                 );
