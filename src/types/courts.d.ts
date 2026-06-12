@@ -91,6 +91,7 @@ declare global {
     }
 
     interface FacilityInfo {
+        name: string;
         bio: string;
         amenities: string[];
         address: string;

@@ -9,6 +9,7 @@ import { cn } from '../../utils/twMerge';
 
 const FacilitySection = ({
     facility,
+    showNameEdit = false,
     onBioChange,
     onToggleAmenity,
     onFieldChange,
@@ -17,6 +18,7 @@ const FacilitySection = ({
     readOnly = false,
 }: {
     facility: FacilityInfo;
+    showNameEdit?: boolean;
     onBioChange: (bio: string) => void;
     onToggleAmenity: (a: string) => void;
     onFieldChange: (field: keyof FacilityInfo, value: string) => void;
@@ -32,6 +34,21 @@ const FacilitySection = ({
                     <h3 className="font-semibold text-foreground">
                         Facility Information
                     </h3>
+
+                    {showNameEdit && (
+                        <div className="space-y-2">
+                            <Label htmlFor="facility-name">Venue Name</Label>
+                            <Input
+                                id="facility-name"
+                                value={facility.name}
+                                onChange={(e) =>
+                                    onFieldChange('name', e.target.value)
+                                }
+                                placeholder="e.g. Padel Arena Dubai"
+                                disabled={readOnly}
+                            />
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label htmlFor="facility-phone">Phone Number</Label>

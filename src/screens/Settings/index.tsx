@@ -114,12 +114,14 @@ const Settings = () => {
     const [section, setSection] = useState<Section>('hub');
     const [activeSport, setActiveSport] = useState('');
 
+    const [venueId, setVenueId] = useState('');
     const [courts, setCourts] = useState<CourtData[]>([]);
     const [courtsRaw, setCourtsRaw] = useState<CourtModel[]>([]);
     const [hours, setHours] = useState<OperatingHours[]>(defaultHours);
     const [peakConfigs, setPeakConfigs] = useState<SportPeakConfig[]>([]);
     const [amenities, setAmenities] = useState<AmenityModel[]>([]);
     const [facility, setFacility] = useState<FacilityInfo>({
+        name: '',
         bio: '',
         amenities: [],
         address: '',
@@ -256,7 +258,9 @@ const Settings = () => {
                 getOnBoardedVenueDetails(),
             ]);
             setAmenities(amenitiesRes.data.amenities);
+            setVenueId(venueRes.data.venue.id);
             setFacility({
+                name: venueRes.data.venue.name ?? '',
                 bio: venueRes.data.venue.description ?? '',
                 amenities: amenitiesRes.data.amenities.map((a: AmenityModel) => a.name),
                 address: venueRes.data.venue.address ?? '',
@@ -708,6 +712,7 @@ const Settings = () => {
         try {
             await updateVenueDescription(facility.bio);
             await updateVenueInfo({
+                ...(venueId === 'cmnelxc8r000nucbkcxn85n0l' && facility.name ? { name: facility.name } : {}),
                 address: facility.address || undefined,
                 phone: facility.phone || undefined,
                 latitude: facility.latitude ? parseFloat(facility.latitude) : undefined,
@@ -834,6 +839,7 @@ const Settings = () => {
                 {section === 'facility' && (
                     <FacilitySection
                         facility={facility}
+                        showNameEdit={venueId === 'cmnelxc8r000nucbkcxn85n0l'}
                         onBioChange={(bio) => setFacility((p) => ({ ...p, bio }))}
                         onFieldChange={(field, value) => setFacility((p) => ({ ...p, [field]: value }))}
                         onToggleAmenity={toggleAmenity}
