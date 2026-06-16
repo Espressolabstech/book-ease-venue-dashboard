@@ -537,6 +537,13 @@ const Settings = () => {
     };
     const saveEdit = async () => {
         if (!editForm) return;
+        const isDuplicate = courts.some(
+            (c) => c.id !== editForm.id && c.sport === editForm.sport && c.name.trim().toLowerCase() === editForm.name.trim().toLowerCase(),
+        );
+        if (isDuplicate) {
+            toast.error(`A ${editForm.sport} court named "${editForm.name}" already exists`);
+            return;
+        }
         try {
             const environment: CourtEnvironment = envToApi(editForm.environment);
             const status: CourtStatus = editForm.isActive ? 'ACTIVE' : 'INACTIVE';
@@ -586,6 +593,13 @@ const Settings = () => {
     const addCourt = async () => {
         if (!newCourt.name.trim()) {
             toast.error('Court name is required');
+            return;
+        }
+        const isDuplicate = courts.some(
+            (c) => c.sport === newCourt.sport && c.name.trim().toLowerCase() === newCourt.name.trim().toLowerCase(),
+        );
+        if (isDuplicate) {
+            toast.error(`A ${newCourt.sport} court named "${newCourt.name}" already exists`);
             return;
         }
         const availableSurfaces = getSurfaceOptions(newCourt.sport, newCourt.environment as EnvironmentOption);
