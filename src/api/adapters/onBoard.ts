@@ -67,6 +67,7 @@ export const updateVenueDescription = async (
 export const updateVenueInfo = async (data: {
     name?: string;
     address?: string;
+    area?: string;
     phone?: string;
     latitude?: number;
     longitude?: number;

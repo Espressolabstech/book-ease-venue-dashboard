@@ -65,6 +65,19 @@ const FacilitySection = ({
                     </div>
 
                     <div className="space-y-2">
+                        <Label htmlFor="facility-area">Area / Locality</Label>
+                        <Input
+                            id="facility-area"
+                            value={facility.area}
+                            onChange={(e) =>
+                                onFieldChange('area', e.target.value)
+                            }
+                            placeholder="e.g. Thaltej"
+                            disabled={readOnly}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
                         <Label htmlFor="facility-address">Address</Label>
                         <Textarea
                             id="facility-address"

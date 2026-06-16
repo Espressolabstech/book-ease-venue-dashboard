@@ -125,6 +125,7 @@ const Settings = () => {
         bio: '',
         amenities: [],
         address: '',
+        area: '',
         phone: '',
         latitude: '',
         longitude: '',
@@ -264,6 +265,7 @@ const Settings = () => {
                 bio: venueRes.data.venue.description ?? '',
                 amenities: amenitiesRes.data.amenities.map((a: AmenityModel) => a.name),
                 address: venueRes.data.venue.address ?? '',
+                area: venueRes.data.venue.area ?? '',
                 phone: venueRes.data.venue.phone ?? '',
                 latitude: venueRes.data.venue.latitude != null ? String(venueRes.data.venue.latitude) : '',
                 longitude: venueRes.data.venue.longitude != null ? String(venueRes.data.venue.longitude) : '',
@@ -714,6 +716,7 @@ const Settings = () => {
             await updateVenueInfo({
                 ...(venueId === 'cmnelxc8r000nucbkcxn85n0l' && facility.name ? { name: facility.name } : {}),
                 address: facility.address || undefined,
+                area: facility.area || undefined,
                 phone: facility.phone || undefined,
                 latitude: facility.latitude ? parseFloat(facility.latitude) : undefined,
                 longitude: facility.longitude ? parseFloat(facility.longitude) : undefined,

@@ -312,6 +312,7 @@ declare global {
                 name: string;
                 email: string;
                 phone: string;
+                area?: string;
                 city: string;
                 state: string;
                 country: string;

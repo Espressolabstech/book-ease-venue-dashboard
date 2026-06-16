@@ -95,6 +95,7 @@ declare global {
         bio: string;
         amenities: string[];
         address: string;
+        area: string;
         phone: string;
         latitude: string;
         longitude: string;
