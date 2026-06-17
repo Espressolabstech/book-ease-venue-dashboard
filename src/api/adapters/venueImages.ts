@@ -1,6 +1,16 @@
 import { endpoints } from '../../config/apiEndpoints';
 import apiClient from '../client/apiClient';
 
+export const createVenueImage = async (
+    payload: CreateVenueImagePayload,
+): Promise<CreateVenueImageResponse> => {
+    return apiClient({
+        url: endpoints.createVenueImage,
+        method: 'POST',
+        data: payload,
+    });
+};
+
 export const listVenueImages = async (
     params?: ListVenueImagesParams,
 ): Promise<ListVenueImagesResponse> => {

@@ -9,6 +9,7 @@ import PeakSection from '../../components/settings/peakSection';
 import CourtsSection from '../../components/settings/courtSection';
 import DowntimeSection from '../../components/settings/downtimeSection';
 import FacilitySection from '../../components/settings/facilitySection';
+import ImagesSection from '../../components/settings/imagesSection';
 import BookingRulesSection from '../../components/settings/bookingRulesSection';
 import {
     AlertDialog,
@@ -56,6 +57,7 @@ import {
     updateVenueDescription,
     updateVenueInfo,
 } from '../../api/adapters/onBoard';
+import { listVenueImages } from '../../api/adapters/venueImages';
 import {
     listDowntimes,
     createDowntime as createDowntimeApi,
@@ -115,6 +117,7 @@ const Settings = () => {
     const [activeSport, setActiveSport] = useState('');
 
     const [venueId, setVenueId] = useState('');
+    const [venueImages, setVenueImages] = useState<VenueImageModel[]>([]);
     const [courts, setCourts] = useState<CourtData[]>([]);
     const [courtsRaw, setCourtsRaw] = useState<CourtModel[]>([]);
     const [hours, setHours] = useState<OperatingHours[]>(defaultHours);
@@ -297,6 +300,15 @@ const Settings = () => {
         }
     }, []);
 
+    const fetchVenueImages = useCallback(async () => {
+        try {
+            const res = await listVenueImages();
+            setVenueImages(res.data.venueImages);
+        } catch {
+            toast.error('Failed to load venue images');
+        }
+    }, []);
+
     const savePolicy = async () => {
         setSavingPolicy(true);
         try {
@@ -317,7 +329,8 @@ const Settings = () => {
         fetchAmenities();
         fetchPolicy();
         fetchDowntimes();
-    }, [fetchCourts, fetchHours, fetchAmenities, fetchPolicy, fetchDowntimes]);
+        fetchVenueImages();
+    }, [fetchCourts, fetchHours, fetchAmenities, fetchPolicy, fetchDowntimes, fetchVenueImages]);
 
     useEffect(() => {
         if (courtsRaw.length) fetchPeakHours();
@@ -330,6 +343,7 @@ const Settings = () => {
         courts: activeSport ? `${activeSport} Courts` : 'Manage Courts',
         downtime: 'Scheduled Downtime',
         facility: 'Facility Info',
+        images: 'Venue Photos',
         policy: 'Booking Rules',
     };
 
@@ -851,6 +865,14 @@ const Settings = () => {
                         onNewChange={(u) => setNewDowntime((p) => ({ ...p, ...u }))}
                         onAdd={addDowntimeEntry}
                         onRemove={removeDowntime}
+                    />
+                )}
+                {section === 'images' && (
+                    <ImagesSection
+                        venueId={venueId}
+                        images={venueImages}
+                        onRefresh={fetchVenueImages}
+                        readOnly={readOnly}
                     />
                 )}
                 {section === 'facility' && (

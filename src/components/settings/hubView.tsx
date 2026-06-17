@@ -3,6 +3,7 @@ import {
     CalendarOff,
     ChevronRight,
     Clock,
+    Images,
     LayoutGrid,
     ShieldCheck,
     Zap,
@@ -74,6 +75,12 @@ const HubView = ({
                     Facility
                 </p>
                 <div className="space-y-2">
+                    <HubCard
+                        icon={<Images className="h-5 w-5 text-primary" />}
+                        title="Venue Photos"
+                        subtitle="Cover, logo and gallery images"
+                        onClick={() => onNavigate('images')}
+                    />
                     <HubCard
                         icon={<Building2 className="h-5 w-5 text-primary" />}
                         title="Facility Info"

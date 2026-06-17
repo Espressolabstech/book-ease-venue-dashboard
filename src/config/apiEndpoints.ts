@@ -59,6 +59,7 @@ export const endpoints = {
     deleteVenueHours: (id: string) => `/venue-hours/${id}/delete`,
 
     // Venue Images endpoints
+    createVenueImage: '/venue-images/create',
     listVenueImages: '/venue-images/list',
     updateVenueImage: (id: string) => `/venue-images/${id}/update`,
     deleteVenueImage: (id: string) => `/venue-images/${id}/delete`,

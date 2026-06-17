@@ -6,6 +6,7 @@ declare global {
         | 'courts'
         | 'downtime'
         | 'facility'
+        | 'images'
         | 'policy';
 
     type SportType =

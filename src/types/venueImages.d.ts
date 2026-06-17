@@ -27,6 +27,17 @@ declare global {
         order?: number;
     }
 
+    interface CreateVenueImagePayload {
+        url: string;
+        type: VenueImageType;
+        altText?: string;
+        order?: number;
+    }
+
+    interface CreateVenueImageResponse {
+        data: { venueImage: VenueImageModel };
+    }
+
     interface UpdateVenueImageResponse {
         data: { venueImage: VenueImageModel };
     }
