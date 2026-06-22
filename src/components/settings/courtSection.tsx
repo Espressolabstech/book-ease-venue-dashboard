@@ -183,8 +183,9 @@ const CourtsSection = ({
 
             {courts.map((court) => {
                 const isEditing = editingCourtId === court.id;
+                const today = new Date().toISOString().split('T')[0];
                 const courtDowntimes = downtimes.filter(
-                    (d) => d.courtId === court.id,
+                    (d) => d.courtId === court.id && d.endDate >= today,
                 );
 
                 return (

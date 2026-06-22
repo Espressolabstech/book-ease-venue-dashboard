@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import {
     BarChart3,
     CalendarDays,
-    Loader2,
     Plus,
     Settings,
     UserCog,
@@ -125,7 +125,7 @@ const Dashboard = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="bg-primary px-4 pb-6 pt-10 text-primary-foreground">
+            <header className="bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-6 pt-10 text-primary-foreground">
                 <h1 className="text-xl font-bold">Manager Dashboard</h1>
                 <p className="text-sm opacity-80">{venueName || ' '}</p>
             </header>
@@ -183,8 +183,8 @@ const Dashboard = () => {
                 </h3>
                 <div className="mt-2 space-y-2 pb-6">
                     {loading ? (
-                        <div className="flex items-center justify-center py-8">
-                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <div className="flex items-center justify-center py-4">
+                            <AnimatedLoader size={90} />
                         </div>
                     ) : bookings.length === 0 ? (
                         <p className="py-8 text-center text-sm text-muted-foreground">

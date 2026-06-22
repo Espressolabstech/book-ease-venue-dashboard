@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Plus, Trash2, UserCog } from 'lucide-react';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Card, CardContent } from '../../components/ui/card';
@@ -120,7 +121,7 @@ const Staff = () => {
 
     return (
         <div className="min-h-screen bg-background pb-8">
-            <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+            <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                 <button
                     onClick={() => navigate(path.dashboard)}
                     className="rounded-full p-1 hover:bg-primary-foreground/10"
@@ -254,8 +255,8 @@ const Staff = () => {
 
                 {/* Staff List */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    <div className="flex items-center justify-center py-8">
+                        <AnimatedLoader size={90} />
                     </div>
                 ) : staff.length === 0 ? (
                     <Card>

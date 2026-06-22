@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { tierConfig } from '../../utils/mockData';
 import {
     ArrowLeft,
@@ -8,7 +9,6 @@ import {
     ChevronRight,
     Clock,
     Gift,
-    Loader2,
     Search,
     Star,
     TrendingUp,
@@ -217,7 +217,7 @@ const Players = () => {
         if (detailLoading || !detail) {
             return (
                 <div className="min-h-screen bg-background flex items-center justify-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <AnimatedLoader />
                 </div>
             );
         }
@@ -233,7 +233,7 @@ const Players = () => {
 
         return (
             <div className="min-h-screen bg-background">
-                <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+                <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                     <button
                         onClick={() => setSelectedUserId(null)}
                         className="rounded-full p-1 hover:bg-primary-foreground/10"
@@ -626,7 +626,7 @@ const Players = () => {
     // ── List view ──────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-background">
-            <header className="bg-primary px-4 pb-5 pt-10 text-primary-foreground">
+            <header className="bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-5 pt-10 text-primary-foreground">
                 <div className="flex items-center gap-3 mb-4">
                     <button
                         onClick={() => navigate(path.dashboard)}
@@ -772,8 +772,8 @@ const Players = () => {
 
                         {/* Player list */}
                         {playersLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                            <div className="flex items-center justify-center py-6">
+                                <AnimatedLoader size={90} />
                             </div>
                         ) : players.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12">

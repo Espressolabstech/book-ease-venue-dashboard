@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { getToken } from '../../utils/cookies.helpers';
 
 const VenueInvite = () => {
@@ -28,7 +28,7 @@ const VenueInvite = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-background">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <AnimatedLoader />
         </div>
     );
 };

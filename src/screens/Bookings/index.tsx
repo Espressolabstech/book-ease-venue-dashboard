@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../../hooks/use-toast';
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { format } from 'date-fns';
 import { cn, formatTime } from '../../utils/twMerge';
 import {
@@ -572,7 +573,7 @@ const Booking = () => {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+            <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                 {step !== 'success' && (
                     <button
                         onClick={() => {
@@ -647,8 +648,8 @@ const Booking = () => {
 
                         {/* Grid: time rows × court columns */}
                         {courtsLoading || slotsLoading ? (
-                            <div className="flex justify-center py-12">
-                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            <div className="flex justify-center py-6">
+                                <AnimatedLoader size={90} />
                             </div>
                         ) : (
                             <ScrollArea className="mt-1">
@@ -774,8 +775,8 @@ const Booking = () => {
 
                                 <div className="space-y-1">
                                     {playersLoading ? (
-                                        <div className="flex justify-center py-8">
-                                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                        <div className="flex justify-center py-4">
+                                            <AnimatedLoader size={70} />
                                         </div>
                                     ) : filteredPlayers.length === 0 ? (
                                         <p className="text-sm text-muted-foreground text-center py-6">
