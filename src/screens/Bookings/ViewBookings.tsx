@@ -5,6 +5,7 @@ import {
     AlertTriangle,
     ArrowLeft,
     Calendar,
+    CheckCircle,
     Clock,
     CreditCard,
     Loader2,
@@ -13,7 +14,7 @@ import {
     XCircle,
 } from 'lucide-react';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
-import { getBooking, cancelBooking } from '../../api/adapters/bookings';
+import { getBooking, cancelBooking, cashPayment } from '../../api/adapters/bookings';
 import { cn, formatTime } from '../../utils/twMerge';
 import { path } from '../../navigation/commanPaths';
 import { Badge } from '../../components/ui/badge';
@@ -53,6 +54,7 @@ const ViewBooking = () => {
     const [error, setError] = useState<string | null>(null);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [cancelling, setCancelling] = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -70,6 +72,23 @@ const ViewBooking = () => {
             .then((res) => setBooking(res.data.booking))
             .catch(() => {})
             .finally(() => setRefreshing(false));
+    };
+
+    const handleConfirm = async () => {
+        if (!booking) return;
+        setConfirming(true);
+        try {
+            const res = await cashPayment(booking.id);
+            setBooking((prev) => prev ? { ...prev, status: 'CONFIRMED', payment: res.data.payment ?? prev.payment } : prev);
+        } catch (err: unknown) {
+            const msg =
+                err && typeof err === 'object' && 'message' in err
+                    ? (err as { message: string }).message
+                    : 'Failed to confirm booking';
+            setError(msg);
+        } finally {
+            setConfirming(false);
+        }
     };
 
     const handleCancel = async () => {
@@ -303,6 +322,20 @@ const ViewBooking = () => {
                         Open to Cancel — this slot will auto-release and the
                         player will be refunded if someone else books it.
                     </div>
+                )}
+
+                {/* Confirm pending booking (cash received / manual override) */}
+                {booking.status === 'PENDING' && (
+                    <Button
+                        className="w-full"
+                        disabled={confirming}
+                        onClick={handleConfirm}
+                    >
+                        {confirming
+                            ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            : <CheckCircle className="h-4 w-4 mr-2" />}
+                        Confirm Booking (Cash Received)
+                    </Button>
                 )}
 
                 {/* Cancel */}
