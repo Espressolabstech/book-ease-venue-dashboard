@@ -14,6 +14,7 @@ import {
     Clock,
     CreditCard,
     Loader2,
+    RefreshCw,
     Search,
     Share2,
     User,
@@ -187,11 +188,13 @@ const Booking = () => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
     // Fetch all venue bookings for the selected date (for player names on booked slots)
+    const [bookingsRefreshKey, setBookingsRefreshKey] = useState(0);
+    const refreshVenueBookings = () => setBookingsRefreshKey((k) => k + 1);
     useEffect(() => {
         listVenueBookings({ date: dateStr, limit: 100 })
             .then((res) => setVenueBookings(res.data.bookings))
             .catch(() => setVenueBookings([]));
-    }, [dateStr]);
+    }, [dateStr, bookingsRefreshKey]);
 
     // Fetch real slot availability whenever visible courts or date changes
     useEffect(() => {
@@ -1319,7 +1322,16 @@ const Booking = () => {
             >
                 <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
                     <SheetHeader className="mb-4">
-                        <SheetTitle>Booking Details</SheetTitle>
+                        <div className="flex items-center justify-between">
+                            <SheetTitle>Booking Details</SheetTitle>
+                            <button
+                                onClick={refreshVenueBookings}
+                                className="rounded-full p-1.5 hover:bg-muted transition-colors"
+                                title="Refresh"
+                            >
+                                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                        </div>
                     </SheetHeader>
 
                     {selectedBookedBooking ? (

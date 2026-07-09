@@ -9,7 +9,7 @@ import {
     CreditCard,
     Loader2,
     MapPin,
-    User,
+    RefreshCw,
     XCircle,
 } from 'lucide-react';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
@@ -49,6 +49,7 @@ const ViewBooking = () => {
 
     const [booking, setBooking] = useState<BookingModel | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [cancelling, setCancelling] = useState(false);
@@ -61,6 +62,15 @@ const ViewBooking = () => {
             .catch((err) => setError(err?.message ?? 'Failed to load booking'))
             .finally(() => setLoading(false));
     }, [id]);
+
+    const handleRefresh = () => {
+        if (!id || refreshing) return;
+        setRefreshing(true);
+        getBooking(id)
+            .then((res) => setBooking(res.data.booking))
+            .catch(() => {})
+            .finally(() => setRefreshing(false));
+    };
 
     const handleCancel = async () => {
         if (!booking) return;
@@ -137,9 +147,17 @@ const ViewBooking = () => {
                     <ArrowLeft className="h-5 w-5" />
                 </button>
                 <h1 className="font-semibold">Booking Details</h1>
+                <button
+                    onClick={handleRefresh}
+                    disabled={refreshing}
+                    className="ml-auto rounded-full p-1.5 hover:bg-primary-foreground/10 disabled:opacity-50"
+                    title="Refresh"
+                >
+                    <RefreshCw className={cn('h-4 w-4', refreshing && 'animate-spin')} />
+                </button>
                 <Badge
                     className={cn(
-                        'ml-auto text-xs font-medium',
+                        'text-xs font-medium',
                         statusColors[booking.status],
                     )}
                 >

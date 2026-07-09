@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { AlertTriangle, ArrowLeft, Calendar, Clock, CreditCard, Loader2, Plus, User, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Calendar, Clock, CreditCard, Loader2, Plus, RefreshCw, User, XCircle } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { DateStrip } from '../../components/DateStrip';
@@ -58,7 +58,7 @@ const ListBookings = () => {
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
     // Fetch all venue bookings for the selected date (used to find booking detail on slot click)
-    const { data: venueBookingsData } = useQuery({
+    const { data: venueBookingsData, refetch: refetchBookings } = useQuery({
         queryKey: ['venueBookings', dateStr],
         queryFn: () => listVenueBookings({ date: dateStr, limit: 100 }),
     });
@@ -469,7 +469,16 @@ const ListBookings = () => {
             <Sheet open={!!selectedSlot} onOpenChange={(open) => { if (!open) { setSelectedSlot(null); setCancelDialogOpen(false); } }}>
                 <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
                     <SheetHeader className="mb-4">
-                        <SheetTitle>Booking Details</SheetTitle>
+                        <div className="flex items-center justify-between">
+                            <SheetTitle>Booking Details</SheetTitle>
+                            <button
+                                onClick={() => refetchBookings()}
+                                className="rounded-full p-1.5 hover:bg-muted transition-colors"
+                                title="Refresh"
+                            >
+                                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                        </div>
                     </SheetHeader>
 
                     {selectedBooking ? (
