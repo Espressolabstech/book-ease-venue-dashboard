@@ -523,6 +523,7 @@ const Booking = () => {
                 },
                 modal: {
                     ondismiss: () => {
+                        cancelBooking(booking.id, { cancelReason: 'Payment cancelled' }).catch(() => {});
                         toast({
                             title: 'Payment cancelled',
                             variant: 'destructive',
