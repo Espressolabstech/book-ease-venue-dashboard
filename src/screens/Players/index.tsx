@@ -10,7 +10,6 @@ import {
     Clock,
     Gift,
     Search,
-    Star,
     TrendingUp,
     Trophy,
     Users,
@@ -323,21 +322,6 @@ const Players = () => {
                             <p className="text-xs text-muted-foreground mt-0.5">
                                 Last visit:{' '}
                                 {formatLastVisit(player.lastVisitedAt)}
-                            </p>
-                        </div>
-                        <div className="rounded-xl border bg-card p-4">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Star className="h-4 w-4 text-primary" />
-                                <span className="text-xs text-muted-foreground font-medium">
-                                    Completion Rate
-                                </span>
-                            </div>
-                            <p className="text-2xl font-bold text-foreground">
-                                {player.completionRate}%
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {player.completedBookings} of{' '}
-                                {player.totalBookings} sessions
                             </p>
                         </div>
                     </div>
