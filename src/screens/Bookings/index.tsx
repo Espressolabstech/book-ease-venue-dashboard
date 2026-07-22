@@ -107,7 +107,7 @@ const Booking = () => {
         date: string;
         start_time: string;
         end_time: string;
-        status: 'available' | 'booked' | 'blocked';
+        status: 'available' | 'booked' | 'blocked' | 'otc';
     };
 
     const [courts, setCourts] = useState<CourtModel[]>([]);
@@ -217,9 +217,11 @@ const Booking = () => {
                             status:
                                 s.status === 'available'
                                     ? 'available'
-                                    : s.status === 'downtime'
-                                      ? 'blocked'
-                                      : 'booked',
+                                    : s.status === 'otc'
+                                      ? 'otc'
+                                      : s.status === 'downtime'
+                                        ? 'blocked'
+                                        : 'booked',
                         }));
                     return [
                         c.id,
@@ -244,7 +246,10 @@ const Booking = () => {
                     setSelectedSlots((prev) =>
                         prev.filter((id) =>
                             newData[selectedCourt].find(
-                                (s) => s.id === id && s.status === 'available',
+                                (s) =>
+                                    s.id === id &&
+                                    (s.status === 'available' ||
+                                        s.status === 'otc'),
                             ),
                         ),
                     );
@@ -317,7 +322,7 @@ const Booking = () => {
             return;
         }
 
-        if (slot.status !== 'available') return;
+        if (slot.status !== 'available' && slot.status !== 'otc') return;
 
         if (selectedCourt !== courtId) {
             setSelectedCourt(courtId);
@@ -686,9 +691,13 @@ const Booking = () => {
                                                         const slot =
                                                             slots[hourIdx];
                                                         if (!slot) return null;
+                                                        const isOtc =
+                                                            slot.status ===
+                                                            'otc';
                                                         const isAvailable =
                                                             slot.status ===
-                                                            'available';
+                                                                'available' ||
+                                                            isOtc;
                                                         const isSelected =
                                                             selectedCourt ===
                                                                 c.id &&
@@ -712,7 +721,11 @@ const Booking = () => {
                                                                     'flex-1 min-w-[72px] h-12 rounded-md text-center text-xs font-medium transition-all flex flex-col items-center justify-center overflow-hidden px-1',
                                                                     isAvailable &&
                                                                         !isSelected &&
+                                                                        !isOtc &&
                                                                         'bg-success/10 text-success border border-success/30 hover:bg-success/20',
+                                                                    isOtc &&
+                                                                        !isSelected &&
+                                                                        'bg-violet-50 text-violet-600 border border-violet-200 hover:bg-violet-100',
                                                                     isSelected &&
                                                                         'bg-primary text-primary-foreground border border-primary shadow-sm',
                                                                     slot.status ===
@@ -724,11 +737,13 @@ const Booking = () => {
                                                                 )}
                                                             >
                                                                 <span className="truncate w-full text-center leading-tight">
-                                                                    {isAvailable
-                                                                        ? 'Open'
-                                                                        : slot.status === 'booked'
-                                                                          ? (getPlayerNameForSlot(c.id, slot.start_time)?.split(' ')[0] ?? 'Booked')
-                                                                          : '—'}
+                                                                    {isOtc
+                                                                        ? 'OTC'
+                                                                        : isAvailable
+                                                                          ? 'Open'
+                                                                          : slot.status === 'booked'
+                                                                            ? (getPlayerNameForSlot(c.id, slot.start_time)?.split(' ')[0] ?? 'Booked')
+                                                                            : '—'}
                                                                 </span>
                                                                 {isAvailable && (
                                                                     <span
@@ -736,7 +751,9 @@ const Booking = () => {
                                                                             'text-[10px] opacity-75',
                                                                             isSelected
                                                                                 ? 'text-primary-foreground'
-                                                                                : 'text-success',
+                                                                                : isOtc
+                                                                                  ? 'text-violet-600'
+                                                                                  : 'text-success',
                                                                         )}
                                                                     >
                                                                         ₹

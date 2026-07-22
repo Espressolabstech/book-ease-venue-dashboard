@@ -19,7 +19,7 @@ type SlotItem = {
     courtId: string;
     startTime: string;
     endTime: string;
-    status: 'available' | 'booked' | 'pending';
+    status: 'available' | 'booked' | 'pending' | 'otc';
 };
 
 const bookingStatusColors: Record<BookingStatus, string> = {
@@ -206,6 +206,7 @@ const ListBookings = () => {
     const getSlotColor = (status: SlotItem['status']) => {
         if (status === 'booked') return 'bg-destructive';
         if (status === 'pending') return 'bg-warning/70';
+        if (status === 'otc') return 'bg-violet-500';
         return 'bg-success';
     };
 
@@ -359,7 +360,7 @@ const ListBookings = () => {
                                         {allCourtsSlots.map(({ court, slots: courtSlots }) => {
                                             const slot = courtSlots[rowIdx];
                                             const color = slot ? getSlotColor(slot.status) : 'bg-muted';
-                                            const isClickable = slot?.status === 'booked' || slot?.status === 'pending';
+                                            const isClickable = slot?.status === 'booked' || slot?.status === 'pending' || slot?.status === 'otc';
                                             const playerName = isClickable
                                                 ? (getBookingForSlotTime(court.id, slot!.startTime)?.user?.name ?? null)
                                                 : null;
@@ -392,7 +393,7 @@ const ListBookings = () => {
                         </div>
 
                         <p className="mt-3 text-center text-xs text-muted-foreground">
-                            Tap a booked / pending cell to view that court's detail
+                            Tap a booked / pending / OTC cell to view that court's detail
                         </p>
                     </div>
                 ) : (
@@ -406,8 +407,9 @@ const ListBookings = () => {
                             currentCourtSlots.map((slot) => {
                                 const isBooked = slot.status === 'booked';
                                 const isPending = slot.status === 'pending';
+                                const isOtc = slot.status === 'otc';
                                 const isAvailable = slot.status === 'available';
-                                const booking = (isBooked || isPending)
+                                const booking = (isBooked || isPending || isOtc)
                                     ? getBookingForSlotTime(slot.courtId, slot.startTime)
                                     : null;
                                 const playerName = booking?.user?.name ?? booking?.user?.phone ?? null;
@@ -420,9 +422,10 @@ const ListBookings = () => {
                                             isAvailable && 'bg-card border-border',
                                             isBooked && 'bg-destructive/5 border-destructive/20 cursor-pointer hover:bg-destructive/10',
                                             isPending && 'bg-warning/5 border-warning/20 cursor-pointer hover:bg-warning/10',
+                                            isOtc && 'bg-violet-50 border-violet-200 cursor-pointer hover:bg-violet-100',
                                         )}
                                         onClick={() => {
-                                            if (isBooked || isPending) {
+                                            if (isBooked || isPending || isOtc) {
                                                 setSelectedSlot({ courtId: slot.courtId, startTime: slot.startTime });
                                             }
                                         }}
@@ -436,6 +439,7 @@ const ListBookings = () => {
                                                 isAvailable && 'bg-success',
                                                 isBooked && 'bg-destructive',
                                                 isPending && 'bg-warning',
+                                                isOtc && 'bg-violet-500',
                                             )}
                                         />
                                         <div className="flex-1 min-w-0">
@@ -451,6 +455,13 @@ const ListBookings = () => {
                                                     <User className="h-3.5 w-3.5 text-warning shrink-0" />
                                                     <p className="truncate text-sm font-medium text-warning">
                                                         {playerName ?? 'Pending payment'}
+                                                    </p>
+                                                </div>
+                                            ) : isOtc ? (
+                                                <div className="flex items-center gap-1.5">
+                                                    <User className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                                                    <p className="truncate text-sm font-medium text-violet-600">
+                                                        {playerName ?? 'Open to Cancel'} · Bookable
                                                     </p>
                                                 </div>
                                             ) : (

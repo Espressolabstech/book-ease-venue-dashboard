@@ -194,7 +194,7 @@ declare global {
     interface AvailableSlotItem {
         startTime: string;
         endTime: string;
-        status: 'available' | 'booked' | 'pending' | 'downtime';
+        status: 'available' | 'booked' | 'pending' | 'otc' | 'downtime';
     }
 
     interface AvailableSlotsResponse {
