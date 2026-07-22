@@ -1,7 +1,7 @@
 import { endpoints } from '../../config/apiEndpoints';
 import apiClient from '../client/apiClient';
 
-export const listStaff = () =>
+export const listStaff = (): Promise<ListStaffResponse> =>
     apiClient({ url: endpoints.listStaff, method: 'GET' });
 
 export const addStaff = (data: {

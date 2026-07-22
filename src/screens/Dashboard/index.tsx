@@ -3,7 +3,6 @@ import { AnimatedLoader } from '../../components/AnimatedLoader';
 import {
     BarChart3,
     CalendarDays,
-    Plus,
     Settings,
     UserCog,
     Users,

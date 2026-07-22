@@ -8,6 +8,13 @@ declare global {
         status: string;
         createdAt: string;
     }
+
+    interface ListStaffResponse {
+        message: string;
+        data: {
+            staff: StaffMember[];
+        };
+    }
 }
 
 export {};
