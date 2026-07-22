@@ -4,6 +4,12 @@ import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Switch } from '../ui/switch';
 
+const isOvernight = (openTime: string, closeTime: string) => {
+    const [oh, om] = openTime.split(':').map(Number);
+    const [ch, cm] = closeTime.split(':').map(Number);
+    return ch * 60 + cm <= oh * 60 + om;
+};
+
 const HoursSection = ({
     hours,
     toggleDay,
@@ -63,6 +69,11 @@ const HoursSection = ({
                                     }
                                     className="h-8 text-xs"
                                 />
+                                {isOvernight(h.openTime, h.closeTime) && (
+                                    <span className="whitespace-nowrap rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700">
+                                        +1 day
+                                    </span>
+                                )}
                             </div>
                         ) : (
                             <span className="text-sm text-muted-foreground">

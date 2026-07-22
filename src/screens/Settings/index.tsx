@@ -77,6 +77,24 @@ const DAY_NAMES = [
 ];
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+// Venue hours may store a closeTime past "24:00" (e.g. "28:00" = 4 AM the
+// next day) for venues open overnight. Native <input type="time"> can't
+// display that, so we show the plain wall-clock time and re-derive the
+// "next day" extension on save based on whether it's earlier than openTime.
+function toDisplayTime(hhmm: string): string {
+    const [h, m] = hhmm.split(':').map(Number);
+    return `${(h % 24).toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+function toStoredCloseTime(openTime: string, closeTime: string): string {
+    const [oh, om] = openTime.split(':').map(Number);
+    const [ch, cm] = closeTime.split(':').map(Number);
+    if (ch * 60 + cm <= oh * 60 + om) {
+        return `${(ch + 24).toString().padStart(2, '0')}:${cm.toString().padStart(2, '0')}`;
+    }
+    return closeTime;
+}
+
 function venueHoursToOperatingHours(apiHours: VenueHoursModel[]): OperatingHours[] {
     return DAY_NAMES.map((day, i) => {
         const entry = apiHours.find((h) => h.dayOfWeek === i);
@@ -84,7 +102,9 @@ function venueHoursToOperatingHours(apiHours: VenueHoursModel[]): OperatingHours
             day,
             isOpen: entry ? !entry.isClosed : true,
             openTime: entry?.openTime ?? '08:00',
-            closeTime: entry?.closeTime ?? '22:00',
+            closeTime: entry?.closeTime
+                ? toDisplayTime(entry.closeTime)
+                : '22:00',
             id: entry?.id,
         };
     });
@@ -377,7 +397,9 @@ const Settings = () => {
                     saveVenueHour({
                         dayOfWeek: i,
                         openTime: h.isOpen ? h.openTime : '00:00',
-                        closeTime: h.isOpen ? h.closeTime : '00:00',
+                        closeTime: h.isOpen
+                            ? toStoredCloseTime(h.openTime, h.closeTime)
+                            : '00:00',
                         isClosed: !h.isOpen,
                     }),
                 ),
