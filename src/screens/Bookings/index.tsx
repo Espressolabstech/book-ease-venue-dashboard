@@ -58,7 +58,7 @@ const bookingStatusColors: Record<BookingStatus, string> = {
 
 const paymentMethodLabel: Record<string, string> = {
     CASH: 'Cash',
-    WALLET: 'Wallet',
+    WALLET: 'Points',
     UPI: 'UPI',
     CARD: 'Card',
     NET_BANKING: 'Net Banking',
@@ -1062,8 +1062,8 @@ const Booking = () => {
                                                     null
                                                         ? 'Loading…'
                                                         : walletHasSufficientBalance
-                                                          ? `₹${playerWalletBalance.toLocaleString('en-IN')} available`
-                                                          : `₹${playerWalletBalance.toLocaleString('en-IN')} — low`}
+                                                          ? `${playerWalletBalance.toLocaleString('en-IN')} pts available`
+                                                          : `${playerWalletBalance.toLocaleString('en-IN')} pts — low`}
                                                 </span>
                                             )}
                                             {isWallet && !isWalletAvailable && (

@@ -462,13 +462,13 @@ const Players = () => {
                             <div className="flex items-center justify-between">
                                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                                     <Wallet className="h-4 w-4 text-primary" />
-                                    Wallet
+                                    Points
                                 </h3>
                                 <span className="text-base font-bold text-foreground">
-                                    ₹
                                     {parseFloat(
                                         player.user.wallet.balance,
-                                    ).toLocaleString()}
+                                    ).toLocaleString()}{' '}
+                                    pts
                                 </span>
                             </div>
                             {player.user.wallet.transactions.length > 0 && (
@@ -507,7 +507,7 @@ const Players = () => {
                                                     {txn.type === 'CREDIT'
                                                         ? '+'
                                                         : '-'}
-                                                    ₹{txn.amount}
+                                                    {txn.amount} pts
                                                 </span>
                                             </div>
                                         ))}
@@ -521,7 +521,7 @@ const Players = () => {
                         <div className="rounded-xl border bg-card p-4 space-y-3">
                             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                                 <Gift className="h-4 w-4 text-primary" />
-                                Credit Plans
+                                Points Plans
                             </h3>
                             <div className="space-y-2">
                                 {player.user.packagePurchases.map((p) => (

@@ -58,7 +58,7 @@ const ALL_MENU_ITEMS: {
     },
     {
         icon: Wallet,
-        label: 'Wallets',
+        label: 'Points',
         path: path.wallet,
         color: 'bg-success/10 text-success',
         roles: ['VENUE_ADMIN'],

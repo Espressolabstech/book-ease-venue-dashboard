@@ -32,7 +32,7 @@ const bookingStatusColors: Record<BookingStatus, string> = {
 
 const paymentMethodLabel: Record<string, string> = {
     CASH: 'Cash',
-    WALLET: 'Wallet',
+    WALLET: 'Points',
     UPI: 'UPI',
     CARD: 'Card',
     NET_BANKING: 'Net Banking',

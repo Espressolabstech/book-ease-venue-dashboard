@@ -62,9 +62,9 @@ const Wallets = () => {
                         <ArrowLeft className="h-4 w-4" />
                     </button>
                     <div>
-                        <h1 className="text-lg font-bold">Player Wallets</h1>
+                        <h1 className="text-lg font-bold">Player Points</h1>
                         <p className="text-xs opacity-80">
-                            Credit balances &amp; usage
+                            Points balances &amp; usage
                         </p>
                     </div>
                 </div>
@@ -80,10 +80,10 @@ const Wallets = () => {
                                 <div className="h-8 w-24 mx-auto rounded bg-muted animate-pulse mt-1" />
                             ) : (
                                 <p className="text-2xl font-bold text-primary">
-                                    ₹
                                     {(
                                         totals?.totalActiveBalance ?? 0
-                                    ).toLocaleString('en-IN')}
+                                    ).toLocaleString('en-IN')}{' '}
+                                    pts
                                 </p>
                             )}
                             <p className="text-[11px] text-muted-foreground">
@@ -98,10 +98,10 @@ const Wallets = () => {
                                 <div className="h-8 w-24 mx-auto rounded bg-muted animate-pulse mt-1" />
                             ) : (
                                 <p className="text-2xl font-bold text-foreground">
-                                    ₹
                                     {(
                                         totals?.totalLiability ?? 0
-                                    ).toLocaleString('en-IN')}
+                                    ).toLocaleString('en-IN')}{' '}
+                                    pts
                                 </p>
                             )}
                             <p className="text-[11px] text-muted-foreground">
@@ -145,7 +145,7 @@ const Wallets = () => {
                             </div>
                         ) : filterBySearch(activeWallets).length === 0 ? (
                             <p className="py-8 text-center text-sm text-muted-foreground">
-                                No active wallets found
+                                No active points found
                             </p>
                         ) : (
                             filterBySearch(activeWallets).map((player) => (
@@ -166,7 +166,7 @@ const Wallets = () => {
                             </div>
                         ) : filterBySearch(pastWallets).length === 0 ? (
                             <p className="py-8 text-center text-sm text-muted-foreground">
-                                No past wallets found
+                                No past points found
                             </p>
                         ) : (
                             filterBySearch(pastWallets).map((player) => (

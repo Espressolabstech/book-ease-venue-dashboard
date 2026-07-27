@@ -64,7 +64,7 @@ export function PlayerRow({ player }: { player: PlayerWallet }) {
                                 <p
                                     className={`text-lg font-bold ${player.creditBalance > 0 ? 'text-green-500' : 'text-muted-foreground'}`}
                                 >
-                                    ₹{player.creditBalance.toLocaleString('en-IN')}
+                                    {player.creditBalance.toLocaleString('en-IN')} pts
                                 </p>
                                 <p className="text-[10px] text-muted-foreground">
                                     balance
@@ -144,8 +144,8 @@ export function PlayerRow({ player }: { player: PlayerWallet }) {
                                     <span
                                         className={`text-xs font-semibold tabular-nums shrink-0 ${isCredit ? 'text-green-500' : 'text-destructive'}`}
                                     >
-                                        {isCredit ? '+' : '-'}₹
-                                        {Math.abs(amount).toLocaleString('en-IN')}
+                                        {isCredit ? '+' : '-'}
+                                        {Math.abs(amount).toLocaleString('en-IN')} pts
                                     </span>
                                 </div>
                             );

@@ -4,7 +4,7 @@ export const paymentMethods: {
     icon: string;
 }[] = [
     { value: 'cash', label: 'Cash', icon: '💵' },
-    { value: 'wallet', label: 'Wallet', icon: '👛' },
+    { value: 'wallet', label: 'Points', icon: '👛' },
     { value: 'upi', label: 'UPI', icon: '📱' },
     { value: 'card', label: 'Card', icon: '💳' },
     { value: 'net_banking', label: 'Net Banking', icon: '🏦' },
@@ -189,5 +189,5 @@ export const paymentMethodDisplayLabels: Record<IndianPaymentMethod, string> = {
     cash: 'Cash',
     card: 'Card',
     net_banking: 'Net Banking',
-    wallet: 'Wallet',
+    wallet: 'Points',
 };
