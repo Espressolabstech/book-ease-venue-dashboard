@@ -501,7 +501,7 @@ const Booking = () => {
                 amount: razorpay.amount,
                 currency: razorpay.currency,
                 order_id: razorpay.orderId,
-                name: 'Book Ease',
+                name: 'PlayPass',
                 description: `Court booking · ${firstSelectedSlot ? formatTime(firstSelectedSlot.start_time) : ''} – ${lastSelectedSlot ? formatTime(lastSelectedSlot.end_time) : ''}`,
                 handler: async (response) => {
                     try {

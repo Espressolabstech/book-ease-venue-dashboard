@@ -48,7 +48,7 @@ const OnBoardingLayout = ({
                         </div>
                         <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-foreground">
-                                {'Book Ease'}
+                                {'PlayPass'}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 {completedCount} of 8 steps complete

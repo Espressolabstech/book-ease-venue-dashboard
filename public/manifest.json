@@ -1,7 +1,7 @@
 {
-  "name": "BookEase Venue Dashboard",
-  "short_name": "BookEase",
-  "description": "Manage your venue with BookEase",
+  "name": "PlayPass Venue Dashboard",
+  "short_name": "PlayPass",
+  "description": "Manage your venue with PlayPass",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
